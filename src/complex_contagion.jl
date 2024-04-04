@@ -42,6 +42,15 @@ draw_delays(m::SIRModel, p::Vector{F}, rng::AbstractRNG, i::Integer) where F<:Ab
 is_spreading(p::Real, rng::AbstractRNG, i::Integer, j::Integer) = rand(rng)<p
 is_spreading( p::Vector{F}, rng::AbstractRNG, i::Integer, j::Integer) where F<:AbstractFloat = rand(rng)<p[i]
 
+function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8, Tuple{Int8, F, I}}, 
+    delays_trans::Matrix{II}, rng::AbstractRNG, i::Integer) where F<:AbstractFloat where I<:Integer where II <:Integer
+    for (st_check,vals) in indep_transitions
+        ns, p, c = vals
+        #p = dat[3]
+        delays_trans[i,c] = draw_delays(model, p, rng, i)
+    end
+end
+
 function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_active::Vector{I}, 
     init_state_inactive::Symbol, init_state_active::Symbol, rng::AbstractRNG) where I<:Integer
     N =nv(g)
@@ -76,8 +85,6 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
 
-function extract_transitions(model::AbstractEpiModel, trans:: Dict{Int8, Tuple{Int8, F}}) where F<:AbstractFloat
-end
 
 function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData,
     spreading_function::Function = is_spreading
@@ -119,6 +126,7 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
                     ## transitioned
                     states[i] = ns
                     last_trans_time[i] = t
+                    #println("at t=$t $i transitions from $st_check ($(all_states[st_check])) -> $ns ($(all_states[ns]))")
                 end
             end
             #c+=1 ##increment counter for transitions
@@ -144,8 +152,9 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
                             states[j] = newst
                             last_trans_time[j] = t+1
                             ## extract transitions
-                            tr=indep_transitions[newst]
-                            delays_trans[j,tr[3]] = draw_delays(model,tr[2],rng, j)
+                            ##tr=indep_transitions[newst]
+                            ##delays_trans[j,tr[3]] = draw_delays(model,tr[2],rng, j)
+                            extract_delays(model,indep_transitions,delays_trans,rng, j)
                             cinf+=1
                         end
                     end
