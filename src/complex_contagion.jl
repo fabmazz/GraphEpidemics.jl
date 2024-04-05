@@ -105,6 +105,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     indep_transitions = trans_independent(model)
     n_trans = length(indep_transitions)
     delays_trans = fill(NULLT,(N,n_trans))
+    
     #for (i, trans) in enumerate(indep_transitions)
     #    delays_trans[:,i] = draw_delays_nodes(model, trans[3], rng, collect(1:N) )
     #end
@@ -119,7 +120,7 @@ function process_spreading_states(model::AbstractEpiModel, sval::Dict{Symbol,Int
 end
 
 
-function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData,
+function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData;
     spreading_function::Function = is_spreading, verbose=false,
     )
     N = nv(g)
