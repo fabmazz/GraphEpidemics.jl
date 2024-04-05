@@ -3,27 +3,38 @@ using OffsetArrays
 beta_R0(R0::Real,g::AbstractGraph,gamma::Real) = R0*gamma/mean(degree(g))
 beta_R0(R0::Real,mean_deg::Real,gamma::Real) = R0*gamma/mean_deg
 
+struct SIRSimData{I<:Integer, F<:AbstractFloat}
+    rec_delays::Vector{F}
+    infect_time::Vector{F}
+    infect_node::Vector{F}
+end
 
-function sim_sir(g::AbstractGraph,T::Integer, lambda::AbstractFloat, delays::Vector, rng::AbstractRNG, pz)
+
+function sim_sir(g::AbstractGraph,T::Integer, lambda::AbstractFloat, delays::Vector, rng::AbstractRNG, patient_zeros::Vector{I}) where I<: Int
     N = nv(g)
     #track = fill(NaN, (N,2))
     infect_t = fill(NaN, N)
     infect_i = fill(NaN, N)
 
     states::Vector{Int8} = fill(0, N)
-    for i in pz
+    for i in patient_zeros
         states[i] = 1
         infect_t[i] = -1 ## time of infection
         infect_i[i] = -10 ## node of infection
     end
 
+    counts = zeros(Int,(T+1,3))
     for t =0:T
         ## set recovered state
         #println("Have $(sum(states.==1)) infected, $(sum(states.==0)) sus PRE")
-        #states[@. t >= ( track[:,1] +1)] .= 1
-        states[@. t >= ( infect_t + 1 + delays) ] .= 2
+        mask_rec = @. t >= ( infect_t + 1 + delays)
+        states[mask_rec] .= 2
         nS =  (sum(states.==0))
-        nR= sum(states.==2)
+        nI = sum(states.==1)
+        nR= sum(mask_rec)
+        counts[t+1,1] = nS
+        counts[t+1,2] = nI
+        counts[t+1,3] = nR
         #println("Have $nS S $(sum(states.==1)) I $nR R")
         c=0
         for i in findall(states.==1)
@@ -42,7 +53,7 @@ function sim_sir(g::AbstractGraph,T::Integer, lambda::AbstractFloat, delays::Vec
         #println("$c new infected at time $t")
 
     end #for time loop
-    infect_t, infect_i, states
+    infect_t, infect_i, states, counts
 end
 
 function calc_n_comparts(infect_times,delays,T::Integer)

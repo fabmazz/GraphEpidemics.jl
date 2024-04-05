@@ -22,7 +22,7 @@ function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8, Tu
     for (st_check,vals) in indep_transitions
         ns, p, c = vals
         #p = dat[3]
-        delays_trans[i,c] = draw_delays(model, p, rng, i)
+        delays_trans[i,c] = draw_delay_i(model, p, rng, i)
     end
 end
 
@@ -52,7 +52,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
         ## extract delays for those in transitions
         for (c,dat) in enumerate(indep_transitions)
             p = dat[3]
-            delays_trans[i,c] = draw_delays(model, p, rng, i)
+            delays_trans[i,c] = draw_delay_i(model, p, rng, i)
         end
     end
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
@@ -86,7 +86,7 @@ function set_state_nodes(model::AbstractEpiModel, data::SimData, rng::AbstractRN
     end
 end
 
-function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, state_base::Symbol) 
+function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::AbstractRNG, state_base::Symbol) 
     N =nv(g)
     infect_t = fill(NaN, N)
     infect_i = fill(NaN, N)
@@ -100,43 +100,15 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, state_ba
     indep_transitions = trans_independent(model)
     n_trans = length(indep_transitions)
     delays_trans = fill(NULLT,(N,n_trans))
-
+    #for (i, trans) in enumerate(indep_transitions)
+    #    delays_trans[:,i] = draw_delays_nodes(model, trans[3], rng, collect(1:N) )
+    #end
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
 function process_spreading_states(model::AbstractEpiModel, sval::Dict{Symbol,Int8})
     Dict(sval[k]=>Dict(sval[x[1]]=> (sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
 end
 
-function check_infect(
-    model::AbstractEpiModel,
-    data::SimData,
-    to_dict::Dict{Int8,Tuple{Int8,F}},
-    i::Integer,
-    j::Integer,
-    t::Integer,
-    first_act_states::Set{Int8}, 
-    indep_transitions::Dict{Int8,Tuple{Int8,F,I}},
-    rng::AbstractRNG,
-    spreading_function::Function) where F<:AbstractFloat where I<:Integer
-    sj= data.epistate[j]
-    if sj in keys(to_dict)#(states[j] == st_to)
-        newst, prob = to_dict[sj] 
-        if spreading_function(prob, rng, i, j)
-            ## infected
-            #println("$j infected, from $(states[j]) to $newst")
-            data.infect_times[j] = t
-            data.infect_node[j] = i
-            data.epistate[j] = newst
-            data.last_trans_time[j] = t+1
-            ## extract transitions
-            if newst in first_act_states
-                extract_delays(model,
-                indep_transitions, data.transition_delays, rng, j)
-            end
-            #cinf+=1
-        end
-    end
-end
 
 function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData,
     spreading_function::Function = is_spreading, verbose=false,
@@ -212,6 +184,7 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
                             if newst in first_act_states
                                 extract_delays(model,indep_transitions,delays_trans,rng, j)
                             end
+                            
                             cinf+=1
                         end
                     end
