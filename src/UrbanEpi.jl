@@ -5,7 +5,7 @@ using Distributions
 using Random
 
 greet() = print("Hello World!")
-
+include("models.jl")
 include("sim.jl")
 include("complex_contagion.jl")
 

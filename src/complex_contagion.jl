@@ -1,14 +1,4 @@
 
-#=
-Define spreading states
-=#
-abstract type AbstractEpiModel end
-
-struct SIRModel{F<:AbstractFloat} <: AbstractEpiModel
-    beta::Union{F,Vector{F}}##vector is the 
-    gamma::Union{F,Vector{F}}
-    #stateType::DataType
-end
 
 const NULLT::Int32 = 4000
 
@@ -24,22 +14,6 @@ struct SimData{F<:AbstractFloat,I<:Integer}
 end
 
 
-#SIRModel(beta::F, gamma::F) = SIRModel(beta,gamma,StatesSIR)
-
-
-model_states(x::SIRModel) = (:S,:I,:R)
-function states_values(x::AbstractEpiModel)
-    d::Dict{Symbol,Int8} =  Dict(s=>i for (i,s) in enumerate(model_states(x)))
-    d
-end
-#spreading_state(x::SIRModel) = :I
-spreading_states(x::SIRModel) = Dict(:I=>[(:S,:I, x.beta)])
-
-trans_independent(x::SIRModel) = [(:I,:R, x.gamma)]
-first_active_states(x::SIRModel) = (:I,)
-
-draw_delays(m::SIRModel, p::Real, rng::AbstractRNG, i::Integer) = rand(rng, Geometric(p))+1
-draw_delays(m::SIRModel, p::Vector{F}, rng::AbstractRNG, i::Integer) where F<:AbstractFloat = rand(rng, Geometric(p[i]))+1
 is_spreading(p::Real, rng::AbstractRNG, i::Integer, j::Integer) = rand(rng)<p
 is_spreading( p::Vector{F}, rng::AbstractRNG, i::Integer, j::Integer) where F<:AbstractFloat = rand(rng)<p[i]
 
@@ -83,7 +57,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
     end
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
-
+#Dict{Int8,Tuple{Int8,F,I}}
 process_indep_trans(model::AbstractEpiModel, sval::Dict{Symbol,Int8}) = Dict(sval[x[1]]=>(sval[x[2]], x[3], i) for (i,x) in enumerate(trans_independent(model)) ) 
 
 function set_state_nodes(model::AbstractEpiModel, data::SimData, rng::AbstractRNG, 
@@ -129,7 +103,40 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, state_ba
 
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
+function process_spreading_states(model::AbstractEpiModel, sval::Dict{Symbol,Int8})
+    Dict(sval[k]=>Dict(sval[x[1]]=> (sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
+end
 
+function check_infect(
+    model::AbstractEpiModel,
+    data::SimData,
+    to_dict::Dict{Int8,Tuple{Int8,F}},
+    i::Integer,
+    j::Integer,
+    t::Integer,
+    first_act_states::Set{Int8}, 
+    indep_transitions::Dict{Int8,Tuple{Int8,F,I}},
+    rng::AbstractRNG,
+    spreading_function::Function) where F<:AbstractFloat where I<:Integer
+    sj= data.epistate[j]
+    if sj in keys(to_dict)#(states[j] == st_to)
+        newst, prob = to_dict[sj] 
+        if spreading_function(prob, rng, i, j)
+            ## infected
+            #println("$j infected, from $(states[j]) to $newst")
+            data.infect_times[j] = t
+            data.infect_node[j] = i
+            data.epistate[j] = newst
+            data.last_trans_time[j] = t+1
+            ## extract transitions
+            if newst in first_act_states
+                extract_delays(model,
+                indep_transitions, data.transition_delays, rng, j)
+            end
+            #cinf+=1
+        end
+    end
+end
 
 function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData,
     spreading_function::Function = is_spreading, verbose=false
@@ -158,8 +165,8 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
         println("Independent transitions: $indep_transitions")
     end
 
-    spreading_trans = Dict(sval[k]=>Dict(sval[x[1]]=> (sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
-    first_act_states = [sval[k] for k in first_active_states(model)]
+    spreading_trans = process_spreading_states(model, sval)
+    first_act_states = Set(sval[k] for k in first_active_states(model))
     if verbose
         println("Spreading transitions: $spreading_trans")
     end
