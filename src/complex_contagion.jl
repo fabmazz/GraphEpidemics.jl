@@ -139,7 +139,7 @@ function check_infect(
 end
 
 function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData,
-    spreading_function::Function = is_spreading, verbose=false
+    spreading_function::Function = is_spreading, verbose=false,
     )
     N = nv(g)
     @assert N == data.N
@@ -197,8 +197,7 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
         cinf=0
         for (st_from,to_dict) in spreading_trans
             #st_to, newst, prob = ext
-            idcs_from = findall(states.==st_from)
-            for i in idcs_from
+            for i in findall(states.==st_from)
                 for j in neighbors(g,i)
                     if states[j] in keys(to_dict)#(states[j] == st_to)
                         newst, prob = to_dict[states[j]] 
