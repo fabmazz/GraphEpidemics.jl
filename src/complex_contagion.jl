@@ -5,8 +5,8 @@ Define spreading states
 abstract type AbstractEpiModel end
 
 struct SIRModel{F<:AbstractFloat} <: AbstractEpiModel
-    beta::F ##vector is the 
-    gamma::F
+    beta::Union{F,Vector{F}}##vector is the 
+    gamma::Union{F,Vector{F}}
     #stateType::DataType
 end
 
@@ -132,7 +132,7 @@ end
 
 
 function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Integer, rng::AbstractRNG, data::SimData,
-    spreading_function::Function = is_spreading
+    spreading_function::Function = is_spreading, verbose=false
     )
     N = nv(g)
     @assert N == data.N
@@ -154,11 +154,15 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
     last_trans_time = data.last_trans_time
     @assert size(delays_trans,2) == length(keys(indep_transitions))
 
-    println("Independent transitions: $indep_transitions")
+    if verbose
+        println("Independent transitions: $indep_transitions")
+    end
 
     spreading_trans = Dict(sval[k]=>Dict(sval[x[1]]=> (sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
     first_act_states = [sval[k] for k in first_active_states(model)]
-    println("Spreading transitions: $spreading_trans")
+    if verbose
+        println("Spreading transitions: $spreading_trans")
+    end
     num_states=NamedTuple[]
     for t =0:T
         ## independent transitions
