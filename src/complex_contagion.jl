@@ -1,9 +1,9 @@
-
+import DataFrames: AbstractDataFrame
 
 const NULLT::Int32 = 4000
 
 struct SimData{F<:AbstractFloat,I<:Integer}
-    N::Integer
+    N::Int
     infect_times::Vector{F}
     infect_node::Vector{F}
     states_repr::Dict{Symbol,Int8}
@@ -12,16 +12,16 @@ struct SimData{F<:AbstractFloat,I<:Integer}
     epistate::Vector{Int8}
     additional_log::Vector{Vector{Int64}} #unused, (node, node_infector, time_transitions (multiple))
 end
-struct IndepTrans
+struct IndepTrans{F<:AbstractFloat, I<:Integer}
     stateto::Int8
-    prob::AbstractFloat
-    i::Integer
+    prob::F
+    i::I
 end
 
 is_spreading(p::Real, rng::AbstractRNG, i::Integer, j::Integer) = rand(rng)<p
 is_spreading( p::Vector{F}, rng::AbstractRNG, i::Integer, j::Integer) where F<:AbstractFloat = rand(rng)<p[i]
 
-function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8,IndepTrans}, 
+function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8,<:IndepTrans}, 
     delays_trans::Matrix{II}, rng::AbstractRNG, i::Integer) where II <:Integer
     for (st_check,trans) in indep_transitions
         #ns, p, c = vals
@@ -111,12 +111,12 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     #end
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
-struct RState
+struct StateTo{F<:AbstractFloat}
     st::Int8
-    prob::AbstractFloat
+    prob::F
 end
 function process_spreading_states(model::AbstractEpiModel, sval::Dict{Symbol,Int8})
-    Dict(sval[k]=>Dict(sval[x[1]]=> RState(sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
+    Dict(sval[k]=>Dict(sval[x[1]]=> StateTo(sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
 end
 
 
@@ -205,4 +205,18 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
 
     end #for time loop
     num_states
+end
+
+function group_counts_sims(counts::Vector{<:AbstractDataFrame}, model::AbstractEpiModel)
+    nsims = length(counts)
+    T=size(counts[1],1)
+    res = zeros(Int64,T,3,nsims);
+
+    for (i,c) in enumerate(counts)
+        sort!(c, [:t])
+        for (n,s) in enumerate(model_states(model))
+            res[:,n,i] = c[:,s]
+        end
+    end
+    res
 end

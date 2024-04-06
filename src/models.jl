@@ -5,12 +5,19 @@ function states_values(x::AbstractEpiModel)
     d
 end
 
-struct SIRModel{F<:AbstractFloat} <: AbstractEpiModel
+#=struct SIRModel{F<:AbstractFloat} <: AbstractEpiModel
     beta::Union{F,Vector{F}}##vector is the 
     gamma::Union{F,Vector{F}}
     #stateType::DataType
 end
+=#
 
+struct SIRModel{BT<:Union{Vector{<:AbstractFloat}, AbstractFloat},
+    GT<:Union{Vector{<:AbstractFloat}, AbstractFloat}} <: AbstractEpiModel
+    beta::BT##vector is the 
+    gamma::GT
+    #stateType::DataType
+end
 
 
 
