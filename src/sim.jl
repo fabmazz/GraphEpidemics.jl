@@ -4,19 +4,34 @@ beta_R0(R0::Real,g::AbstractGraph,gamma::Real) = R0*gamma/mean(degree(g))
 beta_R0(R0::Real,mean_deg::Real,gamma::Real) = R0*gamma/mean_deg
 
 struct SIRSimData{I<:Integer, F<:AbstractFloat}
-    rec_delays::Vector{F}
+    rec_delays::Vector{I}
     infect_time::Vector{F}
     infect_node::Vector{F}
 end
 
+SIRSimData(rec_delays, N::Integer) = SIRSimData(rec_delays, fill(NaN,N), fill(NaN, N))
 
-function sim_sir(g::AbstractGraph,T::Integer, lambda::AbstractFloat, delays::Vector, rng::AbstractRNG, patient_zeros::Vector{I}) where I<: Int
+function check_infection(rng::AbstractRNG, p::AbstractFloat, i::Integer, j::Integer, infect_prob_I::Bool)
+    rand(rng) < p
+end
+
+function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_I::Bool)
+    if infect_prob_I
+        return rand(rng) < p[i_I]
+    else
+        return rand(rng) < p[j_S]
+    end
+end
+
+function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
+    patient_zeros::Vector{I}, infect_prob_I::Bool = true) where I<: Integer
     N = nv(g)
-    #track = fill(NaN, (N,2))
-    infect_t = fill(NaN, N)
-    infect_i = fill(NaN, N)
 
-    states::Vector{Int8} = fill(0, N)
+    infect_t = simdata.infect_time
+    infect_i = simdata.infect_node
+    delays = simdata.rec_delays
+
+    states::Vector{Int8} = fill(1, N)
     for i in patient_zeros
         states[i] = 1
         infect_t[i] = -1 ## time of infection
@@ -28,23 +43,25 @@ function sim_sir(g::AbstractGraph,T::Integer, lambda::AbstractFloat, delays::Vec
         ## set recovered state
         #println("Have $(sum(states.==1)) infected, $(sum(states.==0)) sus PRE")
         mask_rec = @. t >= ( infect_t + 1 + delays)
-        states[mask_rec] .= 2
-        nS =  (sum(states.==0))
-        nI = sum(states.==1)
+        states[mask_rec] .= 3
+        nS =  (sum(states.==1))
+        nI = sum(states.==2)
         nR= sum(mask_rec)
         counts[t+1,1] = nS
         counts[t+1,2] = nI
         counts[t+1,3] = nR
         #println("Have $nS S $(sum(states.==1)) I $nR R")
         c=0
-        for i in findall(states.==1)
+        for i in findall(states.==2)
             for j in neighbors(g,i)
-                if (states[j] == 0) & isnan(infect_i[j]) ## double check to be sure
-                    if rand(rng) < lambda
+                if (states[j] == 1) & isnan(infect_i[j]) ## double check to be sure
+                    ## Here, multiple dispatch will help distinguish 
+                    ## when I have a vector of probabilities or just a single one for everyone
+                    if check_infection(rng, model.beta, i, j, infect_prob_I)
                         ## infected
                         infect_t[j] = t
                         infect_i[j] = i
-                        states[j] = 1
+                        states[j] = 2
                         c+=1
                     end
                 end
@@ -53,7 +70,20 @@ function sim_sir(g::AbstractGraph,T::Integer, lambda::AbstractFloat, delays::Vec
         #println("$c new infected at time $t")
 
     end #for time loop
-    infect_t, infect_i, states, counts
+    states, counts
+end
+
+function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::AbstractRNG, 
+    patient_zeros::Vector{<:Integer}, prob_infect_I::Bool=true)
+    ## draw recovery delays
+    N= nv(g)
+    nodes = collect(Int32,1:N)
+    delays = draw_delays_nodes(model, model.gamma, rng, nodes)
+
+    data = SIRSimData(delays,N)
+    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, prob_infect_I)
+
+    data, cc
 end
 
 function calc_n_comparts(infect_times,delays,T::Integer)

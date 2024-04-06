@@ -36,5 +36,5 @@ draw_delay_mk( p::AF, rng::AbstractRNG, nodes::Vector{I}) where I<:Integer= rand
 draw_delay_i(m::SIRModel, p::Real, rng::AbstractRNG, i::Integer) = draw_delay_mk(p,rng,i) #rand(rng, Geometric(p))+1
 draw_delay_i(m::SIRModel, p::Vector{F}, rng::AbstractRNG, i::Integer) where F<:AbstractFloat = draw_delay_mk(p[i], rng)  #rand(rng, Geometric(p[i]))+1
 draw_delays_nodes(m::SIRModel, p::Real, rng::AbstractRNG, nodes::Vector{I}) where I<:Integer = rand(rng, Geometric(p), length(nodes)) .+1
-draw_delays_nodes(m::SIRModel, p::Vector{F}, rng::AbstractRNG, nodes::Vector{I}) where I<:Integer where F<:Real = draw_delay_mk.(p,rng, nodes)
+draw_delays_nodes(m::SIRModel, p::Vector{<:AbstractFloat}, rng::AbstractRNG, nodes::Vector{<:Integer}) = draw_delay_mk.(p,rng, nodes)
 
