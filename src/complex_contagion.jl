@@ -12,7 +12,7 @@ struct SimData{F<:AbstractFloat,I<:Integer}
     epistate::Vector{Int8}
     additional_log::Vector{Vector{Int64}} #unused, (node, node_infector, time_transitions (multiple))
 end
-struct IndepTrans{F<:AbstractFloat, I<:Integer}
+struct IndepTrans{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}, I<:Integer}
     stateto::Int8
     prob::F
     i::I
@@ -26,7 +26,7 @@ function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8,<:I
     for (st_check,trans) in indep_transitions
         #ns, p, c = vals
         #p = dat[3]
-        delays_trans[i,trans.i] = draw_delay_i(model, trans.prob, rng, i)
+        delays_trans[i,trans.i] = draw_delays(model, trans.prob, rng, i)
     end
 end
 
@@ -56,7 +56,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
         ## extract delays for those in transitions
         for (c,dat) in enumerate(indep_transitions)
             p = dat[3]
-            delays_trans[i,c] = draw_delay_i(model, p, rng, i)
+            delays_trans[i,c] = draw_delays(model, p, rng, i)
         end
     end
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
@@ -111,7 +111,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     #end
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
-struct StateTo{F<:AbstractFloat}
+struct StateTo{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}}
     st::Int8
     prob::F
 end

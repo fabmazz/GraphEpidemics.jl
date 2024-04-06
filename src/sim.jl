@@ -33,7 +33,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
 
     states::Vector{Int8} = fill(1, N)
     for i in patient_zeros
-        states[i] = 1
+        states[i] = 2
         infect_t[i] = -1 ## time of infection
         infect_i[i] = -10 ## node of infection
     end
@@ -78,7 +78,7 @@ function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::Abstra
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
-    delays = draw_delays_nodes(model, model.gamma, rng, nodes)
+    delays = draw_delays(model, model.gamma, rng, nodes)
 
     data = SIRSimData(delays,N)
     endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, prob_infect_I)
