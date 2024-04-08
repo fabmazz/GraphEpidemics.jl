@@ -1,4 +1,5 @@
 using OffsetArrays
+using Statistics
 
 beta_R0(R0::Real,g::AbstractGraph,gamma::Real) = R0*gamma/mean(degree(g))
 beta_R0(R0::Real,mean_deg::Real,gamma::Real) = R0*gamma/mean_deg
