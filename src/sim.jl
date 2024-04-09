@@ -25,7 +25,7 @@ function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Inte
 end
 
 function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I}, infect_prob_I::Bool = true) where I<: Integer
+    patient_zeros::Vector{I}; infect_prob_I::Bool = true) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -75,14 +75,14 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
 end
 
 function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}, prob_infect_I::Bool=true)
+    patient_zeros::Vector{<:Integer}; prob_infect_I::Bool=true)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
     delays = draw_delays(model, model.gamma, rng, nodes)
 
     data = SIRSimData(delays,N)
-    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, prob_infect_I)
+    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, infect_prob_I=prob_infect_I)
 
     data, cc
 end
