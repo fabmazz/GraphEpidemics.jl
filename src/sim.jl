@@ -10,7 +10,21 @@ struct SIRSimData{I<:Integer, F<:AbstractFloat}
     infect_node::Vector{F}
 end
 
-SIRSimData(rec_delays, N::Integer) = SIRSimData(rec_delays, fill(NaN,N), fill(NaN, N))
+
+function explode(d::SIRSimData)
+    (d.rec_delays, d.infect_time, d.infect_node)
+end
+function explode(d::SIRSimData, t::DataType)
+    (convert.(t,d.rec_delays), convert.(t,d.infect_time), convert.(t,d.infect_node))
+end
+
+function SIRSimData(li::Union{Vector, Tuple})
+    SIRSimData(li[1], li[2], li[3])
+end
+
+SIRSimData(rec_delays, N::Integer, typeDates::DataType) = SIRSimData(rec_delays, 
+            fill(convert(typeDates,NaN),N), 
+            fill(convert(typeDates,NaN),N))
 
 function check_infection(rng::AbstractRNG, p::AbstractFloat, i::Integer, j::Integer, infect_prob_I::Bool)
     rand(rng) < p
@@ -54,6 +68,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         #println("Have $nS S $(sum(states.==1)) I $nR R")
         c=0
         for i in findall(states.==2)
+            ## TODO: parallel runs need to lock the graph object and then unlock it
             for j in neighbors(g,i)
                 if (states[j] == 1) & isnan(infect_i[j]) ## double check to be sure
                     ## Here, multiple dispatch will help distinguish 
@@ -75,13 +90,13 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
 end
 
 function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; prob_infect_I::Bool=true)
+    patient_zeros::Vector{<:Integer}; prob_infect_I::Bool=true, dtype::DataType=Float64)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
     delays = draw_delays(model, model.gamma, rng, nodes)
 
-    data = SIRSimData(delays,N)
+    data = SIRSimData(delays,N, dtype)
     endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, infect_prob_I=prob_infect_I)
 
     data, cc
