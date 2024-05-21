@@ -15,7 +15,7 @@ end
 struct IndepTrans{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}, I<:Integer}
     stateto::Int8
     prob::F
-    i::I
+    matidx::I
 end
 
 is_spreading(p::Real, rng::AbstractRNG, i::Integer, j::Integer) = rand(rng)<p
@@ -26,7 +26,7 @@ function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8,<:I
     for (st_check,trans) in indep_transitions
         #ns, p, c = vals
         #p = dat[3]
-        delays_trans[i,trans.i] = draw_delays(model, trans.prob, rng, i)
+        delays_trans[i,trans.matidx] = draw_delays(model, trans.prob, rng, i)
     end
 end
 
@@ -160,7 +160,7 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
         for (st_check,trans) in indep_transitions
             for i in findall(states.==st_check)
                 ##check last transition time + delay against t
-                if t >= last_trans_time[i] + delays_trans[i,trans.i]
+                if t >= last_trans_time[i] + delays_trans[i,trans.matidx]
                     ## transitioned
                     states[i] = trans.stateto
                     last_trans_time[i] = t
