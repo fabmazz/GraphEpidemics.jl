@@ -43,3 +43,26 @@ end
 
 
 end
+
+@testset "recurrent" begin
+    model=SIRSModel(0.1,0.1,0.05)
+
+    rng = Xoshiro(40)
+    g=barabasi_albert(1000,14, rng=rng)
+
+    #println(is_connected(g))
+
+    #@benchmark  begin
+    data = init_model_discrete(model, g,rng,:S)
+    start=rand(rng,vertices(g),2)
+
+    set_state_nodes(model,data,rng,start,:I,true)
+    counts = (run_complex_contagion(model,g,200,rng, data));
+
+    count_df = DataFrame(counts)
+    l = size(count_df,1)
+    r=count_df[(end-50):end,:]
+    select!(r,Not(:t))
+
+    @test round.(Int,mean.(eachcol(r))) == [316, 618,66]
+end

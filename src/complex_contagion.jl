@@ -1,6 +1,13 @@
 import DataFrames: AbstractDataFrame
 
-const NULLT::Int32 = 4000
+const LARGET::Int32 =10000
+
+struct TransitionRecord{I<:Integer}
+    idx::Int
+    i_inf::Int32
+    t_inf::Int32
+    trans_delays::Vector{I}
+end
 
 struct SimData{F<:AbstractFloat,I<:Integer}
     N::Int
@@ -10,12 +17,13 @@ struct SimData{F<:AbstractFloat,I<:Integer}
     last_trans_time::Vector{I}
     transition_delays::Array{I,2}
     epistate::Vector{Int8}
-    additional_log::Vector{Vector{Int64}} #unused, (node, node_infector, time_transitions (multiple))
+    additional_log::Vector{TransitionRecord}
 end
 struct IndepTrans{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}, I<:Integer}
     stateto::Int8
     prob::F
     matidx::I
+    reverse::Bool
 end
 
 is_spreading(p::Real, rng::AbstractRNG, i::Integer, j::Integer) = rand(rng)<p
@@ -63,7 +71,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
 end
 
 #Dict{Int8,Tuple{Int8,F,I}}
-process_indep_trans(model::AbstractEpiModel, sval::Dict{Symbol,Int8}) = Dict(sval[x[1]]=>IndepTrans(sval[x[2]], x[3], i) for (i,x) in enumerate(trans_independent(model)) ) 
+process_indep_trans(model::AbstractEpiModel, sval::Dict{Symbol,Int8}) = Dict(sval[x[1]]=>IndepTrans(sval[x[2]], x[3], i, sval[x[2]]<sval[x[1]]) for (i,x) in enumerate(trans_independent(model)) ) 
 
 function set_state_nodes(model::AbstractEpiModel, data::SimData, rng::AbstractRNG, 
         nodes::Vector{I}, state::Symbol, active::Bool, tset::Integer=0) where I<:Integer
@@ -100,16 +108,16 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     init_state = sval[state_base]
 
     states::Vector{Int8} = fill(init_state, N)
-    last_trans_time::Vector{typeof(NULLT)} = fill(-1000, N)
+    last_trans_time::Vector{typeof(LARGET)} = fill(-1000, N)
 
     indep_transitions = trans_independent(model)
     n_trans = length(indep_transitions)
-    delays_trans = fill(NULLT,(N,n_trans))
+    delays_trans = fill(LARGET,(N,n_trans))
     
     #for (i, trans) in enumerate(indep_transitions)
     #    delays_trans[:,i] = draw_delays_nodes(model, trans[3], rng, collect(1:N) )
     #end
-    SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
+    SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Vector{TransitionRecord}(undef, 0))
 end
 struct StateTo{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}}
     st::Int8
@@ -164,6 +172,12 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
                     ## transitioned
                     states[i] = trans.stateto
                     last_trans_time[i] = t
+                    if trans.reverse
+                        ## we have to save the stats
+                        #datv = [i,convert(Int, infect_i[i]), convert(Int, infect_t[i]), data.transition_delays[i,:]... ]
+                        push!(data.additional_log, TransitionRecord(i, convert(Int32, infect_i[i]),convert(Int32, infect_t[i]), data.transition_delays[i,:]))
+                        data.transition_delays[i,:] .= LARGET
+                    end
                     #println("at t=$t $i transitions from $st_check ($(all_states[st_check])) -> $ns ($(all_states[ns]))")
                 end
             end
