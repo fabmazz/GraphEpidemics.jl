@@ -2,7 +2,7 @@ import DataFrames: AbstractDataFrame
 
 const LARGET::Int32 =10000
 
-struct TransitionRecord{I<:Integer}
+struct NodeHistory{I<:Integer}
     idx::Int
     i_inf::Int32
     t_inf::Int32
@@ -17,7 +17,7 @@ struct SimData{F<:AbstractFloat,I<:Integer}
     last_trans_time::Vector{I}
     transition_delays::Array{I,2}
     epistate::Vector{Int8}
-    additional_log::Vector{TransitionRecord}
+    additional_log::Vector{NodeHistory}
 end
 struct IndepTrans{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}, I<:Integer}
     stateto::Int8
@@ -117,7 +117,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     #for (i, trans) in enumerate(indep_transitions)
     #    delays_trans[:,i] = draw_delays_nodes(model, trans[3], rng, collect(1:N) )
     #end
-    SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Vector{TransitionRecord}(undef, 0))
+    SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Vector{NodeHistory}(undef, 0))
 end
 struct StateTo{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}}
     st::Int8
@@ -175,7 +175,7 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
                     if trans.reverse
                         ## we have to save the stats
                         #datv = [i,convert(Int, infect_i[i]), convert(Int, infect_t[i]), data.transition_delays[i,:]... ]
-                        push!(data.additional_log, TransitionRecord(i, convert(Int32, infect_i[i]),convert(Int32, infect_t[i]), data.transition_delays[i,:]))
+                        push!(data.additional_log, NodeHistory(i, convert(Int32, infect_i[i]),convert(Int32, infect_t[i]), data.transition_delays[i,:]))
                         data.transition_delays[i,:] .= LARGET
                     end
                     #println("at t=$t $i transitions from $st_check ($(all_states[st_check])) -> $ns ($(all_states[ns]))")
