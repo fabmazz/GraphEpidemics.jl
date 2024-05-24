@@ -5,3 +5,5 @@ struct SIREpiData{F<:AbstractFloat,I<:Integer} <: AbstractEpiData
     infectors::Vector{F}
     rec_delays::Vector{I}
 end
+
+convert_matrix(x::Vector{<:Tuple}) = reduce(hcat, getindex.(x,i) for i in eachindex(x[1]))

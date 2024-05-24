@@ -52,9 +52,18 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         infect_t[i] = -1 ## time of infection
         infect_i[i] = -10 ## node of infection
     end
-
-    counts = zeros(Int,(T+1,3))
-    for t =0:T
+    
+    
+    t=0
+    useT = (T >= 0)
+    if useT
+        counts = Vector{NTuple{3,Int}}(undef, T+1)
+    else
+        counts = Vector{NTuple{3,Int}}(undef, 0)
+    end
+    nI = length(patient_zeros)
+    mcont = true
+    while (mcont)
         ## set recovered state
         #println("Have $(sum(states.==1)) infected, $(sum(states.==0)) sus PRE")
         mask_rec = @. t >= ( infect_t + 1 + delays)
@@ -62,9 +71,17 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         nS =  (sum(states.==1))
         nI = sum(states.==2)
         nR= sum(mask_rec)
-        counts[t+1,1] = nS
-        counts[t+1,2] = nI
-        counts[t+1,3] = nR
+        if useT
+            counts[t+1] = (nS, nI, nR)
+            ## set here the flag
+            mcont = (t+1 <= T)
+        else 
+            push!(counts, (nS, nI,nR))
+            mcont = nI > 0
+        end
+        #counts[t+1,1] = nS
+        #counts[t+1,2] = nI
+        #counts[t+1,3] = nR
         #println("Have $nS S $(sum(states.==1)) I $nR R")
         c=0
         for i in findall(states.==2)
@@ -84,7 +101,8 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
             end #for neighbors
         end #for infected
         #println("$c new infected at time $t")
-
+        
+        t+=1
     end #for time loop
     states, counts
 end
