@@ -26,25 +26,45 @@ SIRSimData(rec_delays, N::Integer, typeDates::DataType) = SIRSimData(rec_delays,
             fill(convert(typeDates,NaN),N), 
             fill(convert(typeDates,NaN),N))
 
-function check_infection(rng::AbstractRNG, p::AbstractFloat, i::Integer, j::Integer, infect_prob_I::Bool)
+function check_infection(rng::AbstractRNG, p::AbstractFloat, i::Integer, j::Integer, infect_prob_I::Symbol)
     rand(rng) < p
 end
 
-function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_I::Bool)
-    if infect_prob_I
+function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
+    if infect_prob_IS == :I
         return rand(rng) < p[i_I]
-    else
+    elseif infect_prob_IS == :S
         return rand(rng) < p[j_S]
+    else
+        return rand(rng) < sqrt(p[i_I]*p[j_S])
+    end
+end
+
+function get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
+    p
+end
+
+function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
+    if infect_prob_IS == :I
+        return p[i_I]
+    elseif infect_prob_IS == :S
+        return p[j_S]
+    else
+        return sqrt(p[i_I]*p[j_S])
     end
 end
 
 function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I}; infect_prob_I::Bool = true) where I<: Integer
+    patient_zeros::Vector{I}; beta_IorS::Symbol = :I) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
     infect_i = simdata.infect_node
     delays = simdata.rec_delays
+
+    if !(beta_IorS in (:I,:S,:mean))
+        throw(ArgumentError("argument 'beta_IorS' must be one of :I, :S, or :mean"))
+    end
 
     states::Vector{Int8} = fill(1, N)
     for i in patient_zeros
@@ -90,7 +110,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
                 if (states[j] == 1) & isnan(infect_i[j]) ## double check to be sure
                     ## Here, multiple dispatch will help distinguish 
                     ## when I have a vector of probabilities or just a single one for everyone
-                    if check_infection(rng, model.beta, i, j, infect_prob_I)
+                    if rand(rng) < get_p_infection(model.beta, i, j, beta_IorS)
                         ## infected
                         infect_t[j] = t
                         infect_i[j] = i
@@ -108,14 +128,14 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
 end
 
 function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; prob_infect_I::Bool=true, dtype::DataType=Float64)
+    patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
     delays = draw_delays(model, model.gamma, rng, nodes)
 
     data = SIRSimData(delays,N, dtype)
-    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, infect_prob_I=prob_infect_I)
+    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, beta_IorS=beta_IorS)
 
     data, cc
 end

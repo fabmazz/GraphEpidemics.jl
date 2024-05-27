@@ -7,3 +7,6 @@ struct SIREpiData{F<:AbstractFloat,I<:Integer} <: AbstractEpiData
 end
 
 convert_matrix(x::Vector{<:Tuple}) = reduce(hcat, getindex.(x,i) for i in eachindex(x[1]))
+
+abstract type InfectionDirection end
+
