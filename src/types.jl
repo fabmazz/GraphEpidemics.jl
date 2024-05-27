@@ -10,3 +10,6 @@ convert_matrix(x::Vector{<:Tuple}) = reduce(hcat, getindex.(x,i) for i in eachin
 
 abstract type InfectionDirection end
 
+struct InfectI <: InfectionDirection end
+struct InfectS <: InfectionDirection end
+struct InfectMeanIS <: InfectionDirection end

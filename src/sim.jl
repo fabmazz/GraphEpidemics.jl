@@ -54,17 +54,34 @@ function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer,
     end
 end
 
+function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::InfectI)
+    return p[i_I]
+end
+function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::InfectS)
+    return p[j_S]
+end
+function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::InfectMeanIS)
+    return sqrt(p[j_S]*p[i_I])
+end
+function get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::InfectionDirection)
+    return p
+end
+
+
+
+
 function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I}; beta_IorS::Symbol = :I) where I<: Integer
+    patient_zeros::Vector{I}; beta_IorS::InfectionDirection = InfectI()) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
     infect_i = simdata.infect_node
     delays = simdata.rec_delays
 
-    if !(beta_IorS in (:I,:S,:mean))
+    #=if !(beta_IorS in (:I,:S,:mean))
         throw(ArgumentError("argument 'beta_IorS' must be one of :I, :S, or :mean"))
     end
+    =#
 
     states::Vector{Int8} = fill(1, N)
     for i in patient_zeros
@@ -128,7 +145,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
 end
 
 function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64)
+    patient_zeros::Vector{<:Integer}; beta_IorS::InfectionDirection = InfectI(), dtype::DataType=Float64)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)

@@ -10,6 +10,7 @@ export sim_sir_fast, calc_n_comparts, calc_nstates_all, calc_Rarr, calc_n_states
 
 
 include("models.jl")
+include("types.jl")
 include("sim.jl")
 include("complex_contagion.jl")
 include("recurrent.jl")
