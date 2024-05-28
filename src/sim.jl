@@ -66,7 +66,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         throw(ArgumentError("argument 'beta_IorS' must be one of :I, :S, or :mean"))
     end
 
-    states::Vector{Int8} = fill(1, N)
+    states::Vector{StI} = fill(1, N)
     for i in patient_zeros
         states[i] = 2
         infect_t[i] = -1 ## time of infection

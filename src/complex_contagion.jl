@@ -13,14 +13,14 @@ struct SimData{F<:AbstractFloat,I<:Integer}
     N::Int
     infect_times::Vector{F}
     infect_node::Vector{F}
-    states_repr::Dict{Symbol,Int8}
+    states_repr::Dict{Symbol,StI}
     last_trans_time::Vector{I}
     transition_delays::Array{I,2}
-    epistate::Vector{Int8}
+    epistate::Vector{StI}
     additional_log::Vector{NodeHistory}
 end
 struct IndepTrans{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}, I<:Integer}
-    stateto::Int8
+    stateto::StI
     prob::F
     matidx::I
     reverse::Bool
@@ -29,7 +29,7 @@ end
 is_spreading(p::Real, rng::AbstractRNG, i::Integer, j::Integer) = rand(rng)<p
 is_spreading( p::Vector{F}, rng::AbstractRNG, i::Integer, j::Integer) where F<:AbstractFloat = rand(rng)<p[i]
 
-function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{Int8,<:IndepTrans}, 
+function extract_delays(model::AbstractEpiModel,indep_transitions::Dict{StI,<:IndepTrans}, 
     delays_trans::Matrix{II}, rng::AbstractRNG, i::Integer) where II <:Integer
     for (st_check,trans) in indep_transitions
         #ns, p, c = vals
@@ -44,11 +44,11 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
     infect_t = fill(NaN, N)
     infect_i = fill(NaN, N)
     all_states = model_states(model)
-    sval::Dict{Symbol,Int8} = Dict(s=>i for (i,s) in enumerate(all_states))
+    sval::Dict{Symbol,StI} = Dict(s=>i for (i,s) in enumerate(all_states))
     init_state = sval[init_state_inactive]
     infect_state = sval[init_state_active]
 
-    states::Vector{Int8} = fill(init_state, N)
+    states::Vector{StI} = fill(init_state, N)
     last_trans_time::Vector{typeof(NULLT)} = fill(-1000, N)
 
     indep_transitions = trans_independent(model)
@@ -70,8 +70,8 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
 end
 
-#Dict{Int8,Tuple{Int8,F,I}}
-process_indep_trans(model::AbstractEpiModel, sval::Dict{Symbol,Int8}) = Dict(sval[x[1]]=>IndepTrans(sval[x[2]], x[3], i, sval[x[2]]<sval[x[1]]) for (i,x) in enumerate(trans_independent(model)) ) 
+#Dict{StI,Tuple{StI,F,I}}
+process_indep_trans(model::AbstractEpiModel, sval::Dict{Symbol,StI}) = Dict(sval[x[1]]=>IndepTrans(sval[x[2]], x[3], i, sval[x[2]]<sval[x[1]]) for (i,x) in enumerate(trans_independent(model)) ) 
 
 function set_state_nodes(model::AbstractEpiModel, data::SimData, rng::AbstractRNG, 
         nodes::Vector{I}, state::Symbol, active::Bool, tset::Integer=0) where I<:Integer
@@ -81,7 +81,7 @@ function set_state_nodes(model::AbstractEpiModel, data::SimData, rng::AbstractRN
     for (i,st) in enumerate(all_states)
         @assert sval[st] == i
     end
-    states::Vector{Int8} = data.epistate
+    states::Vector{StI} = data.epistate
 
     st_int = sval[state]
     states[nodes] .= st_int
@@ -104,10 +104,10 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     infect_t = fill(NaN, N)
     infect_i = fill(NaN, N)
     all_states = model_states(model)
-    sval::Dict{Symbol,Int8} = Dict(s=>i for (i,s) in enumerate(all_states))
+    sval::Dict{Symbol,StI} = Dict(s=>i for (i,s) in enumerate(all_states))
     init_state = sval[state_base]
 
-    states::Vector{Int8} = fill(init_state, N)
+    states::Vector{StI} = fill(init_state, N)
     last_trans_time::Vector{typeof(LARGET)} = fill(-1000, N)
 
     indep_transitions = trans_independent(model)
@@ -120,10 +120,10 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, rng::Abs
     SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Vector{NodeHistory}(undef, 0))
 end
 struct StateTo{F<:Union{AbstractFloat,Vector{<:AbstractFloat}}}
-    st::Int8
+    st::StI
     prob::F
 end
-function process_spreading_states(model::AbstractEpiModel, sval::Dict{Symbol,Int8})
+function process_spreading_states(model::AbstractEpiModel, sval::Dict{Symbol,StI})
     Dict(sval[k]=>Dict(sval[x[1]]=> StateTo(sval[x[2]],x[3]) for x in vals) for (k,vals) in spreading_states(model))
 end
 
@@ -142,7 +142,7 @@ function run_complex_contagion(model::AbstractEpiModel, g::AbstractGraph,T::Inte
         @assert sval[st] == i
     end
   
-    states::Vector{Int8} = data.epistate
+    states::Vector{StI} = data.epistate
     infect_t = data.infect_times
     infect_i = data.infect_node
 

@@ -1,7 +1,9 @@
 abstract type AbstractEpiModel end
 
+StI = Int8
+
 function states_values(x::AbstractEpiModel)
-    d::Dict{Symbol,Int8} =  Dict(s=>i for (i,s) in enumerate(model_states(x)))
+    d::Dict{Symbol,StI} =  Dict(s=>i for (i,s) in enumerate(model_states(x)))
     d
 end
 
