@@ -4,11 +4,12 @@ using Statistics
 beta_R0(R0::Real,g::AbstractGraph,gamma::Real) = R0*gamma/mean(degree(g))
 beta_R0(R0::Real,mean_deg::Real,gamma::Real) = R0*gamma/mean_deg
 
-struct SIRSimData{I<:Integer, F<:AbstractFloat}
+struct SIRSimData{I<:Real, F<:AbstractFloat}
     rec_delays::Vector{I}
     infect_time::Vector{F}
     infect_node::Vector{F}
 end
+
 
 
 function explode(d::SIRSimData)
@@ -104,7 +105,8 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         #counts[t+1,3] = nR
         #println("Have $nS S $(sum(states.==1)) I $nR R")
         c=0
-        for i in findall(states.==2)
+        Iidx = findall(states.==2)
+        for i in Iidx
             ## TODO: parallel runs need to lock the graph object and then unlock it
             for j in neighbors(g,i)
                 if (states[j] == 1) & isnan(infect_i[j]) ## double check to be sure

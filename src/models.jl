@@ -2,6 +2,8 @@ abstract type AbstractEpiModel end
 
 StI = Int8
 
+prob_from_rate(r::Real, t::Real) = 1 - exp(-r*t)
+
 function states_values(x::AbstractEpiModel)
     d::Dict{Symbol,StI} =  Dict(s=>i for (i,s) in enumerate(model_states(x)))
     d
@@ -41,3 +43,9 @@ draw_delays_markov(p::Vector{<:AbstractFloat}, rng::AbstractRNG, nodes::Vector{<
 draw_delays_markov(p::Vector{<:AbstractFloat}, rng::AbstractRNG, i::Integer) = draw_delay_geom(p[i], rng, i)
 
 draw_delays(m::SIRModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
+
+
+## Real time - Exponential
+draw_delay_exp(p::AF, rng::AbstractRNG) = rand(rng, Exponential(1/p))
+draw_delay_exp(p::AF, rng::AbstractRNG, i::Integer) = rand(rng, Exponential(1/p))
+draw_delay_exp( p::AF, rng::AbstractRNG, nodes)= rand(rng, Exponential(1/p), length(nodes))
