@@ -168,13 +168,19 @@ function add_event!(tree::BinaryTree, ev, sum_tree::Bool=true)
     end
 end
 
-function find_leaf_idx_random_draw(t::BinaryTree,v::Real,)
-    istart = calc_n_elemns(t.noccupied)
+function find_leaf_idx_random_draw(t::BinaryTree,v::Real,debug=false)
+    istart = length(t.weights) #calc_n_elemns(t.noccupied)
     h = find_h_rec(istart, t.height)
     itop = istart
     while (h > 1)
         idl = down(itop, h, true)
         idr = down(itop, h, false)
+        if v <= 0
+            throw(DomainError(v, "The value to compare must be positive"))
+        end
+        if debug
+            println("h $h, v: $v. The left value is $(t.weights[idl]), right is $(t.weights[idr])")
+        end
         ## these two choices are to be checked first
         if t.weights[idl] == 0
             itop = idr

@@ -183,6 +183,14 @@ function gillespie_sir_first(g::AbstractGraph, model::SIRModel, simdata::SIRSimD
         tot_rate = total_rate(wtree)
         τ = -log( rand(rng)) / tot_rate
         r = rand(rng) * tot_rate
+        c=0
+        while (r <= 0) & (c<1000)
+            r = rand(rng) * tot_rate
+            c+=1
+        end
+        if c == 1000
+            println("ERROR: the random value is 0.0, tot_rate: $tot_rate")
+        end
         idx_ev = find_leaf_idx_random_draw(wtree, r)
         event = remove_event_idx!(wtree, idx_ev)
 
@@ -232,6 +240,8 @@ function gillespie_sir_first(g::AbstractGraph, model::SIRModel, simdata::SIRSimD
         end
         push!(allcounts, StatsBase.counts(states,3))
         push!(times, t)
+
+        tot_rate = total_rate(wtree)
     end
 
     times, allcounts
