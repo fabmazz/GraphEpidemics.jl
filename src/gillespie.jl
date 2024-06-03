@@ -136,7 +136,7 @@ function run_sir_gillespie(g::AbstractGraph, model::SIRModel, rng::AbstractRNG,
     data, times, allcounts
 end
 
-function gillespie_sir_first(g::AbstractGraph, model::SIRModel, simdata::SIRSimData, rng::AbstractRNG, 
+function gillespie_sir_direct(g::AbstractGraph, model::SIRModel, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I};) where I<: Integer
     N = nv(g)
 
@@ -200,6 +200,18 @@ function gillespie_sir_first(g::AbstractGraph, model::SIRModel, simdata::SIRSimD
         states[i] =s
         t+=τ
         if s == 2
+
+            ##remove other infection events for this node
+            remidx = Int[]
+            for (k,e) in wtree.eventsByPos
+                if (e.idx == i)
+                    push!(remidx,k)
+                end
+            end
+            for mid in remidx
+                remove_event_idx!(wtree, mid)
+            end
+
             infect_t[i] = t
             infect_i[i] = event.infector
             for j in neighbors(g,i)
@@ -217,24 +229,17 @@ function gillespie_sir_first(g::AbstractGraph, model::SIRModel, simdata::SIRSimD
             add_event!(wtree, GillespieTrans2(i, -1, StI(3), model.gamma))
             
 
-            ##remove other infection events for this node
-            remidx = Int[]
-            for (k,e) in wtree.eventsByPos
-                if (e.idx == i)
-                    push!(remidx,k)
-                end
-            end
-            for mid in remidx
-                remove_event_idx!(wtree, mid)
-            end
+            #@assert i in keys(infect_events)
 
         elseif s==3
             ## do nothing
             #println("$i has recovered: $ev")
             delays[i] = t - infect_t[i]
-            for ev in infect_events[i]
-                if has_event(wtree,ev)
-                    remove_event!(wtree, ev)
+            if i in keys(infect_events)
+                for ev in infect_events[i]
+                    if has_event(wtree,ev)
+                        remove_event!(wtree, ev)
+                    end
                 end
             end
         end
