@@ -9,7 +9,7 @@ struct SIRSimData{I<:Real, F<:AbstractFloat}
     infect_time::Vector{F}
     infect_node::Vector{F}
 end
-
+SIRSimData{I,F}(N::Integer) where {I,F}= SIRSimData(zeros(I,N), zeros(F,N),zeros(F,N))
 
 
 function explode(d::SIRSimData)
