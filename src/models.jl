@@ -4,6 +4,8 @@ StI = Int8
 
 prob_from_rate(r::Real, t::Real) = 1 - exp(-r*t)
 
+UVFloat = Union{Vector{<:AbstractFloat}, AbstractFloat}
+
 function states_values(x::AbstractEpiModel)
     d::Dict{Symbol,StI} =  Dict(s=>i for (i,s) in enumerate(model_states(x)))
     d
@@ -15,17 +17,22 @@ end
     #stateType::DataType
 end
 =#
+abstract type AbstractSIRModel <: AbstractEpiModel end
 
 struct SIRModel{BT<:Union{Vector{<:AbstractFloat}, AbstractFloat},
-    GT<:Union{Vector{<:AbstractFloat}, AbstractFloat}} <: AbstractEpiModel
+    GT<:Union{Vector{<:AbstractFloat}, AbstractFloat}} <: AbstractSIRModel
     beta::BT##vector is the 
     gamma::GT
     #stateType::DataType
 end
 
+struct SIRModelSus{F1<:UVFloat, F2<:UVFloat, F3<:UVFloat} <:AbstractSIRModel
+    beta::F1
+    sigma::F2
+    gamma::F3
+end
 
-
-model_states(x::SIRModel) = (:S,:I,:R)
+model_states(x::AbstractSIRModel) = (:S,:I,:R)
 
 #spreading_state(x::SIRModel) = :I
 spreading_states(x::SIRModel) = Dict(:I=>[(:S,:I, x.beta)])

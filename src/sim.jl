@@ -55,6 +55,22 @@ function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer,
     end
 end
 
+function calc_prob_infection(model::SIRModel, i::Integer, j::Integer, infect_prob_IS::Symbol)
+    get_p_infection(model.beta, i, j, infect_prob_IS)
+end
+### Average pij
+function get_p_product(p1::Real, p2::Real, i1::Integer, i2::Integer)
+    (p1*p2)
+end
+function get_p_product(p1::Vector{<:Real}, p2::Vector{<:Real}, i1::Integer, i2::Integer)
+    (p1[i1]*p2[i2])
+end
+## TODO: conver cases when p1 is Vector, p2 is not and viceversa
+## prob of infection for SIRModelSus
+function calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored_s::Symbol)
+    get_p_product(model.beta, model.sigma, i, j)
+end
+
 function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; beta_IorS::Symbol = :I) where I<: Integer
     N = nv(g)
@@ -112,7 +128,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
                 if (states[j] == 1) & isnan(infect_i[j]) ## double check to be sure
                     ## Here, multiple dispatch will help distinguish 
                     ## when I have a vector of probabilities or just a single one for everyone
-                    if rand(rng) < get_p_infection(model.beta, i, j, beta_IorS)
+                    if rand(rng) < calc_prob_infection(model, i, j, beta_IorS)
                         ## infected
                         infect_t[j] = t
                         infect_i[j] = i
@@ -129,7 +145,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
     states, counts
 end
 
-function run_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, rng::AbstractRNG, 
+function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, 
     patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64)
     ## draw recovery delays
     N= nv(g)

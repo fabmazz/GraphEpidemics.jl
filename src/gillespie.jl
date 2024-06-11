@@ -12,7 +12,7 @@ end
 GillTrans = GillespieTrans2
 rate(g::GillTrans) = g.rate
 
-draw_delays_gillespie(m::SIRModel, p, rng::AbstractRNG, nodes) = draw_delay_exp(p, rng, nodes)
+draw_delays_gillespie(m::AbstractSIRModel, p, rng::AbstractRNG, nodes) = draw_delay_exp(p, rng, nodes)
 function draw_truncated_exponential(p::AbstractFloat, rng::AbstractRNG, max_t::Real)
     v = rand(rng, Exponential(1/p))
     l = floor(v/max_t)
@@ -50,8 +50,8 @@ function check_add_infect_trans(coda::PriorityQueue,i::Integer, j::Integer,te::A
     ne
 end
 
-function sim_sir_gillespie(g::AbstractGraph, model::SIRModel, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I};) where I<: Integer
+function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
+    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I)
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -73,7 +73,8 @@ function sim_sir_gillespie(g::AbstractGraph, model::SIRModel, simdata::SIRSimDat
         enqueue!(pq,TransEvent(i,3),trec)
         for j in neighbors(g, i)
             if states[j]==1
-                te = draw_delay_exp(model.beta, rng, )+t
+                rate_infect = calc_prob_infection(model, i, j, infect_IorS)
+                te = draw_delay_exp(rate_infect, rng, )+t
                 if te<=trec
                     ne = check_add_infect_trans(pq, i, j, te, infect_i)
                     #push!(allevents,(te,ne))
@@ -97,9 +98,11 @@ function sim_sir_gillespie(g::AbstractGraph, model::SIRModel, simdata::SIRSimDat
         if s == 2
             infect_t[i] = t
             trec = t+delays[i]
+            enqueue!(pq, TransEvent(i,3),trec )
             for j in neighbors(g,i)
                 if states[j]==1
-                    te = draw_delay_exp(model.beta, rng, )+t
+                    rate_infect = calc_prob_infection(model, i, j, infect_IorS)
+                    te = draw_delay_exp(rate_infect, rng, )+t
                     if te <= trec
                         ne=check_add_infect_trans(pq, i, j, te, infect_i)
                         #push!(allevents,(te, ne))
@@ -111,7 +114,7 @@ function sim_sir_gillespie(g::AbstractGraph, model::SIRModel, simdata::SIRSimDat
             if i in patient_zeros
                 println("Coda: $pq")
             end
-            enqueue!(pq, TransEvent(i,3),trec )
+ 
         elseif s==3
             ## do nothing
             #println("$i has recovered: $ev")
@@ -123,7 +126,7 @@ function sim_sir_gillespie(g::AbstractGraph, model::SIRModel, simdata::SIRSimDat
     times, allcounts
 end
 
-function run_sir_gillespie(g::AbstractGraph, model::SIRModel, rng::AbstractRNG, 
+function run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::AbstractRNG, 
     patient_zeros::Vector{<:Integer}; dtype::DataType=Float64)
     ## draw recovery delays
     N= nv(g)

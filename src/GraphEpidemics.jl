@@ -17,6 +17,6 @@ include("recurrent.jl")
 include("binary_tree.jl")
 include("gillespie.jl")
 
-export SISModel, SIRSModel
+export SISModel, SIRSModel, SIRModelSus
 
 end # module GraphEpidemics
