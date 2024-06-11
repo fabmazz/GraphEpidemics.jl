@@ -9,8 +9,20 @@ struct GillespieTrans2{F<:AbstractFloat}
     rate::F
 end
 
-GillTrans = GillespieTrans2
+struct TransKey
+    idx::Int
+    infector::Int
+    tr_idx::StI
+end
+struct GillespieTrans3{F<:AbstractFloat}
+    trkey::TransKey
+    rate::F
+end
+GillespieTrans3(idx, infector, tr_idx, rate) = GillespieTrans3(TransKey(idx, infector, tr_idx), rate)
+
+GillTrans = GillespieTrans3
 rate(g::GillTrans) = g.rate
+key_transition(g::GillTrans) = g.trkey
 
 draw_delays_gillespie(m::AbstractSIRModel, p, rng::AbstractRNG, nodes) = draw_delay_exp(p, rng, nodes)
 function draw_truncated_exponential(p::AbstractFloat, rng::AbstractRNG, max_t::Real)
@@ -175,15 +187,17 @@ function run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::Abstr
     data, times, allcounts
 end
 
-function gillespie_sir_direct(g::AbstractGraph, model::SIRModel, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I};) where I<: Integer
+const NO_INFECTOR = -5
+
+function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
+    patient_zeros::Vector{I}; ignore_infector::Bool=false, infect_IorS::Symbol=:I) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
     infect_i = simdata.infect_node
     delays = simdata.rec_delays
 
-    wtree = BinaryTree{Float64,GillTrans{Float64}}(3)
+    wtree = BinaryTree{Float64,GillTrans{Float64}, TransKey}(3)
 
     t=0.0
     states::Vector{StI} = fill(1, N)
@@ -198,15 +212,18 @@ function gillespie_sir_direct(g::AbstractGraph, model::SIRModel, simdata::SIRSim
 
         #trec = t+delays[i]
         #enqueue!(pq,TransEvent(i,3),trec)
-        add_event!(wtree, GillespieTrans2(i,-1,StI(3),model.gamma))
+        add_event!(wtree, GillTrans(i,-1,StI(3),model.gamma))
         for j in neighbors(g, i)
             if states[j]==1
-                e = GillespieTrans2(j,i,StI(2), model.beta)
+                iif = ignore_infector ? NO_INFECTOR : i
+                e = GillTrans(j,iif,StI(2), calc_prob_infection(model, i,j, infect_IorS))
                 add_event!(wtree,e )
-                if !haskey(infect_events, i)
-                    infect_events[i] = [e]
-                else
-                    push!(infect_events[i],e)
+                if !ignore_infector
+                    if !haskey(infect_events, i)
+                        infect_events[i] = [e]
+                    else
+                        push!(infect_events[i],e)
+                    end
                 end
             end
         end
@@ -232,40 +249,53 @@ function gillespie_sir_direct(g::AbstractGraph, model::SIRModel, simdata::SIRSim
         end
         idx_ev = find_leaf_idx_random_draw(wtree, r)
         event = remove_event_idx!(wtree, idx_ev)
-
-        i=event.idx
-        s = event.tr_idx
+        ekey = key_transition(event)
+        i = ekey.idx
+        s = ekey.tr_idx
         ##set state
         states[i] =s
+        ## increase time 
         t+=τ
         if s == 2
 
-            ##remove other infection events for this node
-            remidx = Int[]
-            for (k,e) in wtree.eventsByPos
-                if (e.idx == i)
-                    push!(remidx,k)
+            if !ignore_infector
+                ##remove other infection events for this node
+                remidx = Int[]
+                for (k,e) in wtree.eventsByPos
+                    if (e.trkey.idx == i)
+                        push!(remidx,k)
+                    end
                 end
-            end
-            for mid in remidx
-                remove_event_idx!(wtree, mid)
+                for mid in remidx
+                    remove_event_idx!(wtree, mid)
+                end
             end
 
             infect_t[i] = t
-            infect_i[i] = event.infector
+            infect_i[i] = event.trkey.infector
             for j in neighbors(g,i)
                 if states[j]==1
-                    e = GillespieTrans2(j,i,StI(2), model.beta)
-                    add_event!(wtree,e )
-                    if !haskey(infect_events, i)
-                        infect_events[i] = [e]
+                    iif = ignore_infector ? NO_INFECTOR : i
+                    e = GillTrans(j,iif,StI(2), calc_prob_infection(model, i,j, infect_IorS))
+                    if ignore_infector
+                        if contains_event(wtree, e)
+                            increase_rate_event!(wtree, e, e.rate)
+                        else
+                            add_event!(wtree,e)
+                        end
+                        ## nothing else to do
                     else
-                        push!(infect_events[i],e)
+                        add_event!(wtree,e )
+                        if !haskey(infect_events, i)
+                            infect_events[i] = [e]
+                        else
+                            push!(infect_events[i],e)
+                        end
                     end
                 end
             end
             ## add recovery transition
-            add_event!(wtree, GillespieTrans2(i, -1, StI(3), model.gamma))
+            add_event!(wtree, GillTrans(i, -1, StI(3), model.gamma))
             
 
             #@assert i in keys(infect_events)
@@ -274,10 +304,21 @@ function gillespie_sir_direct(g::AbstractGraph, model::SIRModel, simdata::SIRSim
             ## do nothing
             #println("$i has recovered: $ev")
             delays[i] = t - infect_t[i]
-            if i in keys(infect_events)
-                for ev in infect_events[i]
-                    if has_event(wtree,ev)
-                        remove_event!(wtree, ev)
+            if ignore_infector
+                for j in neighbors(g, i)
+                    if states[j] == 1
+                        e = GillTrans(j,NO_INFECTOR,StI(2), calc_prob_infection(model, i,j, infect_IorS))
+                        if contains_event(wtree, e)
+                            increase_rate_event!(wtree, e, -1*e.rate)
+                        end
+                    end
+                end
+            else
+                if i in keys(infect_events)
+                    for ev in infect_events[i]
+                        if has_event(wtree,ev)
+                            remove_event!(wtree, ev)
+                        end
                     end
                 end
             end
