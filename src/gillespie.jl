@@ -50,8 +50,13 @@ function check_add_infect_trans(coda::PriorityQueue,i::Integer, j::Integer,te::A
     ne
 end
 
+function draw_infection_delay(model, i::Integer,j::Integer,rng::AbstractRNG, infect_IorS)
+    rate_infect = calc_prob_infection(model, i, j, infect_IorS)
+    draw_delay_exp(rate_infect, rng, )
+end
+
 function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I)
+    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I, max_revive::Integer=0, debug::Bool=false)
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -61,6 +66,7 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
     pq = PriorityQueue{TransEvent,Float64}()
 
     t=0
+    nrevive = Dict{Integer, Integer}()
     states::Vector{StI} = fill(1, N)
     states[patient_zeros] .=2
     #allevents = Tuple{Float64,TransEvent}[]
@@ -73,8 +79,7 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
         enqueue!(pq,TransEvent(i,3),trec)
         for j in neighbors(g, i)
             if states[j]==1
-                rate_infect = calc_prob_infection(model, i, j, infect_IorS)
-                te = draw_delay_exp(rate_infect, rng, )+t
+                te = draw_infection_delay(model, i,j, rng, infect_IorS)+t
                 if te<=trec
                     ne = check_add_infect_trans(pq, i, j, te, infect_i)
                     #push!(allevents,(te,ne))
@@ -101,8 +106,7 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
             enqueue!(pq, TransEvent(i,3),trec )
             for j in neighbors(g,i)
                 if states[j]==1
-                    rate_infect = calc_prob_infection(model, i, j, infect_IorS)
-                    te = draw_delay_exp(rate_infect, rng, )+t
+                    te = draw_infection_delay(model,i,j, rng,infect_IorS)+t
                     if te <= trec
                         ne=check_add_infect_trans(pq, i, j, te, infect_i)
                         #push!(allevents,(te, ne))
@@ -119,22 +123,54 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
             ## do nothing
             #println("$i has recovered: $ev")
         end
+        revivepossible = max_revive>0 && !((i in keys(nrevive)) && (nrevive[i] >= max_revive))
+        if isempty(pq) && (s ==3 ) && revivepossible
+            ## the simulation finished with a recovery event
+            ## the node has not passed the maximum number of "revive" attempt
+            newdelay = draw_delay_exp(model.gamma,rng, i)
+            delays[i] += newdelay
+            newtrec = t + newdelay
+            enqueue!(pq, ev.first, newtrec)
+            ## redraw infection delays
+            for j in neighbors(g, i)
+                if states[j]==1
+                    te = draw_infection_delay(model, i,j, rng, infect_IorS)+t
+                    if te<=newtrec
+                        ne = check_add_infect_trans(pq, i, j, te, infect_i)
+                        #push!(allevents,(te,ne))
+                    end
+                end
+            end
+            ## mark revival
+            if i in keys(nrevive)
+                nrevive[i]+=1
+            else
+                nrevive[i] = 1
+            end
+            states[i] = 2
+            if debug
+                println("t $t: restore $i to I")
+            end
+
+        end
+        ##IMPROVE: if we do not "revive", add to the count
         push!(allcounts, StatsBase.counts(states,3))
         push!(times, t)
+        
     end
 
     times, allcounts
 end
 
 function run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; dtype::DataType=Float64)
+    patient_zeros::Vector{<:Integer}; dtype::DataType=Float64, kwargs...)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
     delays = draw_delays_gillespie(model, model.gamma, rng, nodes)
 
     data = SIRSimData(delays,N, dtype)
-    times, allcounts = sim_sir_gillespie(g, model, data, rng, patient_zeros)
+    times, allcounts = sim_sir_gillespie(g, model, data, rng, patient_zeros; kwargs...)
 
     data, times, allcounts
 end
