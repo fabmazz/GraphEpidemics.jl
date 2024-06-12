@@ -86,7 +86,7 @@ hash(e::Event1) = hash((e.idx,e.from,e.to))
 isequal(e1::Event, e2::Event) = (e1.idx==e2.idx) && (e1.from==e2.from) && (e1.to==e2.to)
 =#
 
-@Base.kwdef mutable struct BinaryTree{F<:AbstractFloat, T}
+@Base.kwdef mutable struct BinaryTree{F<:AbstractFloat, T, R}
     weights::Vector{F}
     idxfree::Set{Int}
     noccupied::Int
@@ -94,12 +94,12 @@ isequal(e1::Event, e2::Event) = (e1.idx==e2.idx) && (e1.from==e2.from) && (e1.to
     numleaves::Int
     leftchild::Vector{Bool}
     eventsByPos::Dict{Int, T}
-    posOfEvent::Dict{T,Int}
-    function BinaryTree{F,T}(nleaves::Int) where {F,T}
+    posOfEvent::Dict{R,Int}
+    function BinaryTree{F,T,R}(nleaves::Int) where {F,T,R}
         h = height_tree(nleaves)
         nels = calc_n_elemns(nleaves)
         ileaves = idcs_leaves(h)
-        new{F,T}(zeros(nels), Set(ileaves), 0, h, 2^h, calc_isleft_vector(h), Dict{Int, T}(), Dict{T, Int}())
+        new{F,T,R}(zeros(nels), Set(ileaves), 0, h, 2^h, calc_isleft_vector(h), Dict{Int, T}(), Dict{R, Int}())
     end
 end
 
@@ -108,7 +108,8 @@ function BinaryTree(v::Vector{T}) where T
     h = height_tree(nleaves)
     nels = calc_n_elemns(nleaves)
     ileaves = idcs_leaves(h)
-    tree=BinaryTree(zeros(nels), Set(ileaves), 0, h, 2^h, calc_isleft_vector(h), Dict{Int, T}(), Dict{T, Int}())
+    R= typeof(key_transition(v[1]))
+    tree=BinaryTree(zeros(nels), Set(ileaves), 0, h, 2^h, calc_isleft_vector(h), Dict{Int, T}(), Dict{R, Int}())
     for e in v
         add_event!(tree,e)
     end
@@ -136,14 +137,14 @@ function expand!(tree::BinaryTree)
     tree
 end
 
-function update_weights!(tree::BinaryTree, imodified::Integer, lvlmod::Integer)
+function update_tree_weights!(tree::BinaryTree, imodified::Integer, lvlmod::Integer)
     if imodified == length(tree.weights)
         return
     end
     ni = up(imodified,lvlmod, tree.leftchild[imodified])
     li = down(ni, lvlmod+1, !tree.leftchild[imodified])
     tree.weights[ni] = tree.weights[li]+tree.weights[imodified]
-    update_weights!(tree, ni, lvlmod+1)
+    update_tree_weights!(tree, ni, lvlmod+1)
 end
 
 function add_event!(tree::BinaryTree, ev, sum_tree::Bool=true) 
@@ -157,14 +158,14 @@ function add_event!(tree::BinaryTree, ev, sum_tree::Bool=true)
     ni = pop!(tree.idxfree)
     
     tree.weights[ni] = rate(ev)
-
-    tree.posOfEvent[ev] = ni
+    keyev = key_transition(ev)
+    tree.posOfEvent[keyev] = ni
     tree.eventsByPos[ni] = ev
 
     tree.noccupied+=1
 
     if sum_tree
-        update_weights!(tree, ni, 1)
+        update_tree_weights!(tree, ni, 1)
     end
 end
 
@@ -202,20 +203,26 @@ end
 function remove_event_idx!(t::BinaryTree, idx)
     ev = t.eventsByPos[idx]
     delete!(t.eventsByPos, idx)
-    delete!(t.posOfEvent, ev)
+    delete!(t.posOfEvent, key_transition(ev))
     push!(t.idxfree, idx)
 
     t.weights[idx] = 0.0
-    update_weights!(t, idx,1)
+    update_tree_weights!(t, idx,1)
     t.noccupied -=1
 
     ev
 end
 function remove_event!(t::BinaryTree, event)
-    idx = t.posOfEvent[event]
+    idx = t.posOfEvent[key_transition(event)]
     remove_event_idx!(t,idx)
     idx
 end
+
+function contains_event(t::BinaryTree, event)
+    key_transition(event) in keys(t.posOfEvent)
+end
+
+get_weight_tree_idx(t::BinaryTree, idx::Int) = t.weights[idx]
 
 function update_event!(t::BinaryTree, event, r::AbstractFloat=-1.0)
     if !(event in keys(t.posOfEvent))
@@ -223,9 +230,21 @@ function update_event!(t::BinaryTree, event, r::AbstractFloat=-1.0)
     end
     idx = t.posOfEvent[event]
     t.weights[idx] = r>0 ? r : rate(event)
-    update_weights!(t, idx, 1)
+    update_tree_weights!(t, idx, 1)
 
     t.eventsByPos[idx] = event
+end
+
+function increase_rate_event!(t::BinaryTree, event, moreR::AbstractFloat)
+    key_ev = key_transition(event)
+    if !(key_ev in keys(t.posOfEvent))
+        throw(ArgumentError("the event $event is not in the dict, add it instead"))
+    end
+    idx = t.posOfEvent[key_ev]
+    t.weights[idx]+=moreR
+    update_tree_weights!(t, idx, 1)
+
+    #t.eventsByPos[idx] = event
 end
 
 

@@ -33,6 +33,8 @@ struct SIRModelSus{F1<:UVFloat, F2<:UVFloat, F3<:UVFloat} <:AbstractSIRModel
 end
 
 model_states(x::AbstractSIRModel) = (:S,:I,:R)
+gamma(x::SIRModel) = x.gamma
+gamma(x::SIRModelSus) = x.gamma
 
 #spreading_state(x::SIRModel) = :I
 spreading_states(x::SIRModel) = Dict(:I=>[(:S,:I, x.beta)])
@@ -55,4 +57,5 @@ draw_delays(m::SIRModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Int
 ## Real time - Exponential
 draw_delay_exp(p::AF, rng::AbstractRNG) = rand(rng, Exponential(1/p))
 draw_delay_exp(p::AF, rng::AbstractRNG, i::Integer) = rand(rng, Exponential(1/p))
-draw_delay_exp( p::AF, rng::AbstractRNG, nodes)= rand(rng, Exponential(1/p), length(nodes))
+draw_delay_exp(p::Vector{<:AF}, rng::AbstractRNG, i::Integer) = rand(rng, Exponential(1/p[i]))
+draw_delay_exp(p::AF, rng::AbstractRNG, nodes)= rand(rng, Exponential(1/p), length(nodes))

@@ -248,6 +248,7 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
             println("ERROR: the random value is 0.0, tot_rate: $tot_rate")
         end
         idx_ev = find_leaf_idx_random_draw(wtree, r)
+        rate_infection = get_weight_tree_idx(wtree, idx_ev)
         event = remove_event_idx!(wtree, idx_ev)
         ekey = key_transition(event)
         i = ekey.idx
@@ -271,8 +272,17 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
                 end
             end
 
+            
+
             infect_t[i] = t
             infect_i[i] = event.trkey.infector
+            infector_r = ignore_infector ? rand(rng)*rate_infection : -2.0
+            inf_search_sum = 0.0
+            infector_found = ignore_infector ? false : true
+            #=if ignore_infector
+                println("$i inf, rate $rate_infection , x: $infector_r")
+            end=#
+            
             for j in neighbors(g,i)
                 if states[j]==1
                     iif = ignore_infector ? NO_INFECTOR : i
@@ -291,6 +301,15 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
                         else
                             push!(infect_events[i],e)
                         end
+                    end
+                elseif (!infector_found & (states[j]==2))
+                    ## might have been infected by it
+                    beta_ji = calc_prob_infection(model, j,i, infect_IorS)
+                    inf_search_sum += beta_ji
+                    #println("j $j rate $beta_ji, cumsum: $inf_search_sum")
+                    if infector_r <= inf_search_sum
+                        infector_found = true
+                        infect_i[i] = j
                     end
                 end
             end
