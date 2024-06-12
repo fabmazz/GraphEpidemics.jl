@@ -238,6 +238,11 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
         
         tot_rate = total_rate(wtree)
         τ = -log( rand(rng)) / tot_rate
+        if τ == 0 
+            println("WARNING: τ is 0. TOTAL RATE: $tot_rate")
+        elseif τ > 1e12
+            println("WARNING: τ is incredibily large (order: $(round(log10(τ))) ) TOTAL RATE: $tot_rate. Occupied tree leaves: $(wtree.noccupied)")
+        end
         r = rand(rng) * tot_rate
         c=0
         while (r <= 0) & (c<1000)
@@ -259,6 +264,9 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
         t+=τ
         if s == 2
 
+            ## add recovery transition
+            add_event!(wtree, GillTrans(i, -1, StI(3), gamma(model)))
+            
             if !ignore_infector
                 ##remove other infection events for this node
                 remidx = Int[]
@@ -277,8 +285,9 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
             infect_t[i] = t
             infect_i[i] = event.trkey.infector
             infector_r = ignore_infector ? rand(rng)*rate_infection : -2.0
-            inf_search_sum = 0.0
+            #=inf_search_sum = 0.0
             infector_found = ignore_infector ? false : true
+            =#
             #=if ignore_infector
                 println("$i inf, rate $rate_infection , x: $infector_r")
             end=#
@@ -302,7 +311,7 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
                             push!(infect_events[i],e)
                         end
                     end
-                elseif (!infector_found & (states[j]==2))
+                #=elseif (!infector_found & (states[j]==2))
                     ## might have been infected by it
                     beta_ji = calc_prob_infection(model, j,i, infect_IorS)
                     inf_search_sum += beta_ji
@@ -311,16 +320,14 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
                         infector_found = true
                         infect_i[i] = j
                     end
+                    =#
                 end
             end
-            ## add recovery transition
-            add_event!(wtree, GillTrans(i, -1, StI(3), model.gamma))
-            
+
 
             #@assert i in keys(infect_events)
 
         elseif s==3
-            ## do nothing
             #println("$i has recovered: $ev")
             delays[i] = t - infect_t[i]
             if ignore_infector
@@ -344,7 +351,7 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
         end
         push!(allcounts, StatsBase.counts(states,3))
         push!(times, t)
-
+        #reupdate total rate
         tot_rate = total_rate(wtree)
     end
 

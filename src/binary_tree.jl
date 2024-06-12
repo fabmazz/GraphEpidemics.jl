@@ -242,7 +242,14 @@ function increase_rate_event!(t::BinaryTree, event, moreR::AbstractFloat)
     end
     idx = t.posOfEvent[key_ev]
     t.weights[idx]+=moreR
-    update_tree_weights!(t, idx, 1)
+    if t.weights[idx] < eps(eltype(t.weights))
+        ## the weight is now probably 0, we need to remove the event
+        remove_event_idx!(t,idx)
+        ## removing the event also updates the tree weights, so we don't need to call the update again
+    else
+
+        update_tree_weights!(t, idx, 1)
+    end
 
     #t.eventsByPos[idx] = event
 end
