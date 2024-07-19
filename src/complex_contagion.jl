@@ -49,11 +49,11 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
     infect_state = sval[init_state_active]
 
     states::Vector{StI} = fill(init_state, N)
-    last_trans_time::Vector{typeof(NULLT)} = fill(-1000, N)
+    last_trans_time::Vector{typeof(LARGET)} = fill(-1000, N)
 
     indep_transitions = trans_independent(model)
     n_trans = length(indep_transitions)
-    delays_trans = fill(NULLT,(N,n_trans))
+    delays_trans = fill(LARGET,(N,n_trans))
 
     
     for i in nodes_active

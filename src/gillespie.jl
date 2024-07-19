@@ -67,8 +67,12 @@ function draw_infection_delay(model, i::Integer,j::Integer,rng::AbstractRNG, inf
     draw_delay_exp(rate_infect, rng, )
 end
 
+function count_val_states(states)
+    StatsBase.counts(states,3)
+end
+
 function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I, max_revive::Integer=0, debug::Bool=false)
+    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I, max_revive::Integer=0, debug::Bool=false, counts_func::Function =count_val_states)
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -102,7 +106,8 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
     end
     ##setup complete
     npz= length(patient_zeros)
-    allcounts = [[N-npz, npz,0]]
+    #allcounts = [[N-npz, npz,0]]
+    allcounts = [counts_func(states)]
     times =[0.]
     while !isempty(pq)
         ev = peek(pq)
@@ -166,7 +171,8 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
 
         end
         ##IMPROVE: if we do not "revive", add to the count
-        push!(allcounts, StatsBase.counts(states,3))
+        #push!(allcounts, StatsBase.counts(states,3))
+        push!(allcounts, counts_func(states))
         push!(times, t)
         
     end
@@ -196,8 +202,8 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
     infect_t = simdata.infect_time
     infect_i = simdata.infect_node
     delays = simdata.rec_delays
-
-    wtree = BinaryTree{Float64,GillTrans{Float64}, TransKey}(3)
+    #Ftype = get_type(calc_prob_infection(model,1,1, infect_IorS))
+    wtree = BinaryTree{Float64,GillTrans{<:AbstractFloat}, TransKey}(3)
 
     t=0.0
     states::Vector{StI} = fill(1, N)
