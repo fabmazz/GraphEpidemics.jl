@@ -100,16 +100,26 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
     end
     nI = length(patient_zeros)
     mcont = true
-    Iidx = findall(states.==2)
+    Iidx = Set(patient_zeros)
+    new_inf = Set()
     while (mcont)
         ## set recovered state
-        #println("Have $(sum(states.==1)) infected, $(sum(states.==0)) sus PRE")
-        #mask_rec = @. t >= ( infect_t + 1 + delays)
-        rec_mask = @. (t >= infect_t[Iidx] + delays[Iidx]+1)
-        states[Iidx[rec_mask]] .= 3
+        
+        #rec_mask = @. (t >= infect_t[Iidx] + delays[Iidx]+1)
+        #states[Iidx[rec_mask]] .= 3
+        new_rec = Set()
+        for i in Iidx
+            if (t >= infect_t[i] + delays[i]+1)
+                states[i] = 3
+                push!(new_rec, i)
+            end
+        end
         #states[mask_rec] .= 3
         #nS =  (sum(states.==1))
+        setdiff!(Iidx, new_rec)
+        union!(Iidx, new_inf)
         nI = sum(states.==2)
+        @assert nI  == length(Iidx)
         #nR= N - nI - nS 
         if useT
             trace_states[t+1] = counts_func(states) #[nS, nI, nR]
@@ -121,7 +131,8 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         end
 
         c=0
-        Iidx = findall(states.==2) # this will be used also later
+        #Iidx = findall(states.==2) # this will be used also later
+        new_inf = Set()
         for i in Iidx
             ## TODO: parallel runs need to lock the graph object and then unlock it
             for j in neighbors(g,i)
@@ -133,6 +144,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
                         infect_t[j] = t
                         infect_i[j] = i
                         states[j] = 2
+                        push!(new_inf, j)
                         c+=1
                     end
                 end
