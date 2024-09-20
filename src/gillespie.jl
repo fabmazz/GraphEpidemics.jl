@@ -1,6 +1,6 @@
-import DataStructures: PriorityQueue, enqueue!, peek, delete!, dequeue!
 import StatsBase
 
+const NO_INFECTOR = -5
 
 struct GillespieTrans2{F<:AbstractFloat}
     idx::Int
@@ -45,21 +45,22 @@ struct TransEvent
     newstate::Int8
 end
 
-function check_add_infect_trans(coda::PriorityQueue,i::Integer, j::Integer,te::AbstractFloat, infector_arr::Vector{<:Real})
+function check_add_infect_trans(coda::PriorityQueue,i_from::Integer, j_to::Integer,te::AbstractFloat, infector_arr::Vector{<:Real})
     
-    ne = TransEvent(j,2)
+    event = TransEvent(j_to,2) # do not track infector in event
 
-    if haskey(coda, ne)
-        tu = coda[ne]
+    if haskey(coda, event)
+        tu = coda[event] # infection for the same j 
         if tu > te
-            coda[ne]=te
-            infector_arr[j] = i
+            ## the new happens before the old one
+            coda[event]=te 
+            infector_arr[j_to] = i_from
         end
     else
-        enqueue!(coda, ne, te)
-        infector_arr[j]=i
+        enqueue!(coda, event, te)
+        infector_arr[j_to]=i_from
     end
-    ne
+    event
 end
 
 function draw_infection_delay(model, i::Integer,j::Integer,rng::AbstractRNG, infect_IorS)
@@ -105,7 +106,6 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
 
     end
     ##setup complete
-    npz= length(patient_zeros)
     #allcounts = [[N-npz, npz,0]]
     allcounts = [counts_func(states)]
     times =[0.]
@@ -193,7 +193,6 @@ function run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::Abstr
     data, times, allcounts
 end
 
-const NO_INFECTOR = -5
 
 function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; ignore_infector::Bool=false, infect_IorS::Symbol=:I) where I<: Integer
