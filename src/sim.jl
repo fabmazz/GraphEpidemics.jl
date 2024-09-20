@@ -94,26 +94,29 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
     t=0
     useT = (T >= 0)
     if useT
-        counts = Vector{NTuple{3,Int}}(undef, T+1)
+        counts = Vector{Vector{Int}}(undef, T+1)
     else
-        counts = Vector{NTuple{3,Int}}(undef, 0)
+        counts = Vector{Vector{Int}}(undef, 0)
     end
     nI = length(patient_zeros)
     mcont = true
+    Iidx = findall(states.==2)
     while (mcont)
         ## set recovered state
         #println("Have $(sum(states.==1)) infected, $(sum(states.==0)) sus PRE")
-        mask_rec = @. t >= ( infect_t + 1 + delays)
-        states[mask_rec] .= 3
+        #mask_rec = @. t >= ( infect_t + 1 + delays)
+        rec_mask = @. (t >= infect_t[Iidx] + delays[Iidx]+1)
+        states[Iidx[rec_mask]] .= 3
+        #states[mask_rec] .= 3
         nS =  (sum(states.==1))
         nI = sum(states.==2)
-        nR= sum(mask_rec)
+        nR= N - nI - nS 
         if useT
-            counts[t+1] = (nS, nI, nR)
+            counts[t+1] = [nS, nI, nR]
             ## set here the flag
             mcont = (t+1 <= T)
         else 
-            push!(counts, (nS, nI,nR))
+            push!(counts, [nS, nI,nR])
             mcont = nI > 0
         end
         #counts[t+1,1] = nS
@@ -121,13 +124,13 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         #counts[t+1,3] = nR
         #println("Have $nS S $(sum(states.==1)) I $nR R")
         c=0
-        Iidx = findall(states.==2)
+        Iidx = findall(states.==2) # this will be used also later
         for i in Iidx
             ## TODO: parallel runs need to lock the graph object and then unlock it
             for j in neighbors(g,i)
-                if (states[j] == 1) & isnan(infect_i[j]) ## double check to be sure
+                if (states[j] == 1) ## double check to be sure
                     ## Here, multiple dispatch will help distinguish 
-                    ## when I have a vector of probabilities or just a single one for everyone
+                    ## when it's a vector of probabilities or just a single one for everyone
                     if rand(rng) < calc_prob_infection(model, i, j, beta_IorS)
                         ## infected
                         infect_t[j] = t
