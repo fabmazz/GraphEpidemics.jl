@@ -72,7 +72,7 @@ function calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored
 end
 
 function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I}; beta_IorS::Symbol = :I) where I<: Integer
+    patient_zeros::Vector{I}; beta_IorS::Symbol = :I, counts_func::Function =count_SIR_states) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -94,9 +94,9 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
     t=0
     useT = (T >= 0)
     if useT
-        counts = Vector{Vector{Int}}(undef, T+1)
+        trace_states = Vector{Vector{Int}}(undef, T+1)
     else
-        counts = Vector{Vector{Int}}(undef, 0)
+        trace_states = Vector{Vector{Int}}(undef, 0)
     end
     nI = length(patient_zeros)
     mcont = true
@@ -108,21 +108,18 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         rec_mask = @. (t >= infect_t[Iidx] + delays[Iidx]+1)
         states[Iidx[rec_mask]] .= 3
         #states[mask_rec] .= 3
-        nS =  (sum(states.==1))
+        #nS =  (sum(states.==1))
         nI = sum(states.==2)
-        nR= N - nI - nS 
+        #nR= N - nI - nS 
         if useT
-            counts[t+1] = [nS, nI, nR]
+            trace_states[t+1] = counts_func(states) #[nS, nI, nR]
             ## set here the flag
             mcont = (t+1 <= T)
         else 
-            push!(counts, [nS, nI,nR])
+            push!(trace_states, counts_func(states))
             mcont = nI > 0
         end
-        #counts[t+1,1] = nS
-        #counts[t+1,2] = nI
-        #counts[t+1,3] = nR
-        #println("Have $nS S $(sum(states.==1)) I $nR R")
+
         c=0
         Iidx = findall(states.==2) # this will be used also later
         for i in Iidx
@@ -145,7 +142,7 @@ function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SI
         
         t+=1
     end #for time loop
-    states, counts
+    states, trace_states
 end
 
 function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, 

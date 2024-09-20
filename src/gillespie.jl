@@ -68,12 +68,8 @@ function draw_infection_delay(model, i::Integer,j::Integer,rng::AbstractRNG, inf
     draw_delay_exp(rate_infect, rng, )
 end
 
-function count_val_states(states)
-    StatsBase.counts(states,3)
-end
-
 function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I, max_revive::Integer=0, debug::Bool=false, counts_func::Function =count_val_states)
+    patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I, max_revive::Integer=0, debug::Bool=false, counts_func::Function =count_SIR_states)
     N = nv(g)
 
     infect_t = simdata.infect_time
