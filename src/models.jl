@@ -52,6 +52,7 @@ draw_delays_markov(p::Vector{<:AbstractFloat}, rng::AbstractRNG, nodes::Vector{<
 draw_delays_markov(p::Vector{<:AbstractFloat}, rng::AbstractRNG, i::Integer) = draw_delay_geom(p[i], rng, i)
 
 draw_delays(m::SIRModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
+draw_delays(m::SIRModelSus, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
 
 
 ## Real time - Exponential

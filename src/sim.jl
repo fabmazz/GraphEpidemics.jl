@@ -71,7 +71,7 @@ function calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored
     get_p_product(model.beta, model.sigma, i, j)
 end
 
-function sim_sir_fast(g::AbstractGraph, model::SIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
+function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; beta_IorS::Symbol = :I, counts_func::Function =count_SIR_states) where I<: Integer
     N = nv(g)
 
