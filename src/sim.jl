@@ -72,7 +72,7 @@ function calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored
 end
 
 function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I}; beta_IorS::Symbol = :I, counts_func::Function =count_SIR_states) where I<: Integer
+    patient_zeros::Vector{I}; beta_IorS::Symbol = :I,counter::AbstractStatesCounter=BaseSIRStatesCounter()) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -94,9 +94,9 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
     t=0
     useT = (T >= 0)
     if useT
-        trace_states = Vector{Vector{Int}}(undef, T+1)
+        trace_states = Vector{SVector}(undef, T+1)
     else
-        trace_states = Vector{Vector{Int}}(undef, 0)
+        trace_states = Vector{SVector}(undef, 0)
     end
     nI = length(patient_zeros)
     mcont = true
@@ -122,11 +122,11 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
         @assert nI  == length(Iidx)
         #nR= N - nI - nS 
         if useT
-            trace_states[t+1] = counts_func(states) #[nS, nI, nR]
+            trace_states[t+1] = count_states(counter,states) #[nS, nI, nR]
             ## set here the flag
             mcont = (t+1 <= T)
         else 
-            push!(trace_states, counts_func(states))
+            push!(trace_states, count_states(counter,states))
             mcont = nI > 0
         end
 
@@ -158,14 +158,17 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
 end
 
 function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64)
+    patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64, counter::AbstractStatesCounter=BaseSIRStatesCounter())
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
     delays = draw_delays(model, model.gamma, rng, nodes)
 
+    #if isnothing(counter)
+    #    counter = BaseSIRStateCounter()
+    #end
     data = SIRSimData(delays,N, dtype)
-    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, beta_IorS=beta_IorS)
+    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, beta_IorS=beta_IorS,counter=counter)
 
     data, cc
 end
