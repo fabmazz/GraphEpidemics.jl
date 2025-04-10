@@ -117,6 +117,7 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
             infect_t[i] = t
             trec = t+delays[i]
             enqueue!(pq, TransEvent(i,3),trec )
+            # for directed graphs, neighbors(g,i) returns the outgoing neighbors
             for j in neighbors(g,i)
                 if states[j]==1
                     te = draw_infection_delay(model,i,j, rng,infect_IorS)+t

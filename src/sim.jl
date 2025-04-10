@@ -132,7 +132,8 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
 
         c=0
         #Iidx = findall(states.==2) # this will be used also later
-        new_inf = Set()
+        empty!(new_inf)
+        #new_inf = Set()
         for i in Iidx
             ## TODO: parallel runs need to lock the graph object and then unlock it
             for j in neighbors(g,i)
