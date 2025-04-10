@@ -1,3 +1,10 @@
+#= 
+ Copyright (c) 2024 Fabio Mazza
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+=#
+
 using OffsetArrays
 using Statistics
 
@@ -11,10 +18,19 @@ struct SIRSimData{I<:Real, F<:AbstractFloat}
 end
 SIRSimData{I,F}(N::Integer) where {I,F}= SIRSimData(zeros(I,N), fill(F(NaN),N),fill(F(NaN),N))
 
+"""
+`explode(d::SIRSimData)`
 
+Returns the three fields of a `SIRSimData` instance as a tuple.
+"""
 function explode(d::SIRSimData)
     (d.rec_delays, d.infect_time, d.infect_node)
 end
+"""
+`explode(d::SIRSimData, t::DataType)`
+
+Returns the fields of a `SIRSimData` object converted to a specified data type.
+"""
 function explode(d::SIRSimData, t::DataType)
     (convert.(t,d.rec_delays), convert.(t,d.infect_time), convert.(t,d.infect_node))
 end
@@ -22,15 +38,29 @@ end
 function SIRSimData(li::Union{Vector, Tuple})
     SIRSimData(li[1], li[2], li[3])
 end
+"""
+`SIRSimData(rec_delays, N::Integer, typeDates::DataType)`
 
+Constructs a `SIRSimData` object given recovery delays, number of nodes, using the specified time data type.
+"""
 SIRSimData(rec_delays, N::Integer, typeDates::DataType) = SIRSimData(rec_delays, 
             fill(convert(typeDates,NaN),N), 
             fill(convert(typeDates,NaN),N))
 
+            """
+`check_infection(rng::AbstractRNG, p::AbstractFloat, i::Integer, j::Integer, infect_prob_I::Symbol)`
+
+Determines whether infection occurs between two nodes using scalar infection probability. `i`, `j` and `infect_prob_I` are ignored.
+"""
 function check_infection(rng::AbstractRNG, p::AbstractFloat, i::Integer, j::Integer, infect_prob_I::Symbol)
     rand(rng) < p
 end
 
+"""
+`check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)`
+
+Determines whether infection occurs using per-node probabilities, optionally depending on infecting or susceptible node.
+"""
 function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
     if infect_prob_IS == :I
         return rand(rng) < p[i_I]
@@ -40,11 +70,20 @@ function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Inte
         return rand(rng) < sqrt(p[i_I]*p[j_S])
     end
 end
+"""
+`get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)`
 
+Returns the infection probability `p`. This method exists for uniformity.
+"""
 function get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
     p
 end
 
+"""
+`get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)`
+
+Returns the infection probability based on the infecting when `infect_prob_IS` is `:I` or susceptible node (`:S`), or their geometric mean when `infect_prob_IS` is neither value.
+"""
 function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
     if infect_prob_IS == :I
         return p[i_I]
@@ -54,7 +93,11 @@ function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer,
         return sqrt(p[i_I]*p[j_S])
     end
 end
+"""
+`calc_prob_infection(model::SIRModel, i::Integer, j::Integer, infect_prob_IS::Symbol)`
 
+Helper method to compute the probability of infection for the SIR model.
+"""
 function calc_prob_infection(model::SIRModel, i::Integer, j::Integer, infect_prob_IS::Symbol)
     get_p_infection(model.beta, i, j, infect_prob_IS)
 end
@@ -66,11 +109,25 @@ function get_p_product(p1::Vector{<:Real}, p2::Vector{<:Real}, i1::Integer, i2::
     (p1[i1]*p2[i2])
 end
 ## TODO: conver cases when p1 is Vector, p2 is not and viceversa
-## prob of infection for SIRModelSus
+
+"""
+`calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored_s::Symbol)`
+
+Computes infection probability for the SIR model with susceptible
+"""
 function calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored_s::Symbol)
     get_p_product(model.beta, model.sigma, i, j)
 end
 
+"""
+`sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{I}; beta_IorS=:I, counter=BaseSIRStatesCounter()) where I<:Integer`
+
+Runs a discrete-time SIR simulation over `T` time steps, with the data structures already set up.
+
+### Optional arguments
+- `beta_IorS=:I`: Whether to base infection probabilities on infectors (`:I`), susceptibles (`:S`), or their mean. Defaults to `:I`.
+- `counter=BaseSIRStatesCounter()`: The state-counting struct. When using a custom struct, make sure to implement `count_states(::BaseSIRStatesCounter, states::Vector)`
+"""
 function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; beta_IorS::Symbol = :I,counter::AbstractStatesCounter=BaseSIRStatesCounter()) where I<: Integer
     N = nv(g)
@@ -157,7 +214,18 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
     end #for time loop
     states, trace_states
 end
+"""
+`run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, patient_zeros::Vector{<:Integer}; beta_IorS=:I, dtype=Float64, counter=BaseSIRStatesCounter())`
 
+Sets up and runs a fast SIR and SIR-like simulation, returning simulation data and state counts.
+
+The `beta_IorS` argument is used only with the default SIR model (::SIRModel). Other models have their own method for computation of the infection probability.
+
+### Optional arguments
+- `beta_IorS`: Infection rule — whether based on infected (`:I`), susceptible (`:S`), or their average if other value. Defaults to `:I`.
+- `dtype=Float64`: Data type for output arrays.
+- `counter=BaseSIRStatesCounter()`: State counting method.
+"""
 function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, 
     patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64, counter::AbstractStatesCounter=BaseSIRStatesCounter())
     ## draw recovery delays
@@ -165,9 +233,6 @@ function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng
     nodes = collect(Int32,1:N)
     delays = draw_delays(model, model.gamma, rng, nodes)
 
-    #if isnothing(counter)
-    #    counter = BaseSIRStateCounter()
-    #end
     data = SIRSimData(delays,N, dtype)
     endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, beta_IorS=beta_IorS,counter=counter)
 

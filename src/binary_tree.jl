@@ -1,3 +1,10 @@
+#= 
+ Copyright (c) 2024 Fabio Mazza
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+=#
+
 height_tree(n_leaves::Real) = ceil(Int, log2(n_leaves)) +1 
 
 function calc_n_elemns(n::Integer)

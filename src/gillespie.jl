@@ -1,3 +1,10 @@
+#= 
+ Copyright (c) 2024 Fabio Mazza
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+=#
+
 import StatsBase
 
 const NO_INFECTOR = -5
@@ -45,6 +52,11 @@ struct TransEvent
     newstate::Int8
 end
 
+"""
+`check_add_infect_trans(coda::PriorityQueue, i_from::Integer, j_to::Integer, te::AbstractFloat, infector_arr::Vector{<:Real})`
+
+Adds or updates an infection transition event in the priority queue, updating the infector record if a better (earlier) event is found.
+"""
 function check_add_infect_trans(coda::PriorityQueue,i_from::Integer, j_to::Integer,te::AbstractFloat, infector_arr::Vector{<:Real})
     
     event = TransEvent(j_to,2) # do not track infector in event
@@ -62,12 +74,27 @@ function check_add_infect_trans(coda::PriorityQueue,i_from::Integer, j_to::Integ
     end
     event
 end
+"""
+`draw_infection_delay(model, i::Integer, j::Integer, rng::AbstractRNG, infect_IorS)`
 
+General method to an infection delay for a susceptible node becoming infected.
+"""
 function draw_infection_delay(model, i::Integer,j::Integer,rng::AbstractRNG, infect_IorS)
     rate_infect = calc_prob_infection(model, i, j, infect_IorS)
     draw_delay_exp(rate_infect, rng, )
 end
 
+"""
+`sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{<:Integer}; infect_IorS=:I, max_revive=0, debug=false, counts_func=count_SIR_states)`
+
+Runs a SIR simulation using an optimized Gillespie algorithm and a priority queue.
+
+### Optional arguments
+- `infect_IorS`: Whether infection rates come from infector (`:I`) or susceptible (`:S`) node. Defaults to `:I` (see `get_p_infection`)
+- `max_revive`: Maximum number of times a node can be re-infected after recovery. Defaults to `0`.
+- `debug`: Enables printing of debug information. Defaults to `false`.
+- `counts_func`: Custom function to count states. Defaults to `count_SIR_states`.
+"""
 function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{<:Integer}; infect_IorS::Symbol=:I, max_revive::Integer=0, debug::Bool=false, counts_func::Function =count_SIR_states)
     N = nv(g)
@@ -177,6 +204,14 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
     times, allcounts
 end
 
+"""
+`run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::AbstractRNG, patient_zeros::Vector{<:Integer}; dtype=Float64, kwargs...)`
+
+Sets up simulation data and runs a Gillespie SIR simulation with recovery delays drawn according to the model.
+
+### Optional arguments
+- `dtype`: Data type for the simulation arrays. Defaults to `Float64`.
+"""
 function run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::AbstractRNG, 
     patient_zeros::Vector{<:Integer}; dtype::DataType=Float64, kwargs...)
     ## draw recovery delays
@@ -190,7 +225,15 @@ function run_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, rng::Abstr
     data, times, allcounts
 end
 
+"""
+`gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{I}; ignore_infector=false, infect_IorS=:I) where I<:Integer`
 
+Runs a SIR simulation using a direct sampling Gillespie method with a binary tree for better event handling. This is NOT the suggested method to use, prefer `sim_sir_gillespie`.
+
+### Optional arguments
+- `ignore_infector`: If true, the simulation does not record who infected each node. Defaults to `false`.
+- `infect_IorS`: Whether infections originate from infected (`:I`) or susceptible (`:S`) nodes. Defaults to `:I`.
+"""
 function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; ignore_infector::Bool=false, infect_IorS::Symbol=:I) where I<: Integer
     N = nv(g)
