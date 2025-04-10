@@ -24,15 +24,15 @@ function test_run_SEIR()
 
     counts[end] # == (; :t=>140, :I=>3, :R=>1891, :S=>106,:E=>0)
 end
-#=@testset "SEIR" begin
+@testset "SEIR" begin
     
-    @test test_run_SEIR()
-
+    ccs = test_run_SEIR()
+    @test abs(ccs[:R]-1891) < 2
 
 end
-=#
 
-@testset "recurrent" begin
+
+@testset "Complex" begin
     model=SIRSModel(0.1,0.1,0.05)
 
     rng = Xoshiro(40)
@@ -53,4 +53,18 @@ end
     select!(r,Not(:t))
 
     @test round.(Int,mean.(eachcol(r))) == [316, 618,66]
+end
+
+
+@testset "Gillespie" begin
+    model=SIRModel(0.23/20,0.2)
+
+    rng = Xoshiro(40)
+    g=random_regular_graph(1000,20, rng=rng)
+
+    start=rand(rng,vertices(g),2)
+
+    datas = run_sir_gillespie(g,model,rng, start);
+
+    @test datas[2][end] > 10
 end
