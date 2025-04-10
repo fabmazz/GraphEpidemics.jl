@@ -116,3 +116,18 @@ draw_delay_exp(p::Vector{<:AF}, rng::AbstractRNG, i::Integer) = rand(rng, Expone
 This function draws `m` exponentially distributed variables with rate `p`, where `m` is the length of the `nodes`
 """
 draw_delay_exp(p::AF, rng::AbstractRNG, nodes)= rand(rng, Exponential(1/p), length(nodes))
+
+#### SEIR Model ####
+struct SEIRModel{F<:AbstractFloat} <: AbstractEpiModel
+    eta::F
+    beta::F ##vector is the 
+    gamma::F
+    #stateType::DataType
+end
+
+model_states(x::SEIRModel) = (:S,:E,:I,:R)
+spreading_states(x::SEIRModel) = Dict(:I=>[(:S,:E, x.beta)])
+trans_independent(x::SEIRModel) = [(:E,:I,x.eta),(:I,:R, x.gamma)]
+
+first_active_states(m::SEIRModel) = (:E,)
+draw_delays(m::SEIRModel, p, rng::AbstractRNG, node) = draw_delays_markov(p, rng, node )
