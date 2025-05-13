@@ -5,7 +5,7 @@
  file, You can obtain one at https://mozilla.org/MPL/2.0/.
 =#
 
-import StatsBase
+import StatsBase: counts
 
 const NO_INFECTOR = -5
 
@@ -195,7 +195,6 @@ function sim_sir_gillespie(g::AbstractGraph, model::AbstractSIRModel, simdata::S
 
         end
         ##IMPROVE: if we do not "revive", add to the count
-        #push!(allcounts, StatsBase.counts(states,3))
         push!(allcounts, counts_func(states))
         push!(times, t)
         
@@ -394,7 +393,7 @@ function gillespie_sir_direct(g::AbstractGraph, model::AbstractSIRModel, simdata
                 end
             end
         end
-        push!(allcounts, StatsBase.counts(states,3))
+        push!(allcounts, counts(states,3))
         push!(times, t)
         #reupdate total rate
         tot_rate = total_rate(wtree)
