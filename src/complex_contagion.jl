@@ -101,7 +101,7 @@ function init_model_discrete(model::AbstractEpiModel, g::AbstractGraph, nodes_ac
             delays_trans[i,c] = draw_delays(model, p, rng, i)
         end
     end
-    SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, Array{Vector{Int64},1}(undef, 0))
+    SimData(N, infect_t, infect_i, sval, last_trans_time, delays_trans, states, NodeHistory[])
 end
 
 """
