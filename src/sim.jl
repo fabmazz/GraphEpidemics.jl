@@ -129,7 +129,10 @@ Runs a discrete-time SIR simulation over `T` time steps, with the data structure
 - `counter=BaseSIRStatesCounter()`: The state-counting struct. When using a custom struct, make sure to implement `count_states(::BaseSIRStatesCounter, states::Vector)`
 """
 function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
-    patient_zeros::Vector{I}; beta_IorS::Symbol = :I,counter::AbstractStatesCounter=BaseSIRStatesCounter()) where I<: Integer
+    patient_zeros::Vector{I}; 
+    beta_IorS::Symbol = :I, 
+    counter::AbstractStatesCounter=BaseSIRStatesCounter(), 
+    dynstateChanger::AbstractStateChanger=nothing) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -185,6 +188,11 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
         else 
             push!(trace_states, count_states(counter,states))
             mcont = nI > 0
+        end
+
+        ### State changer
+        if (!isnothing(dynstateChanger))
+            change_states_dyn(dynstateChanger, model, states, g)
         end
 
         c=0

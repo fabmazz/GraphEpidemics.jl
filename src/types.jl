@@ -12,6 +12,7 @@ abstract type InfectionDirection end
 =#
 
 abstract type AbstractStatesCounter end
+abstract type AbstractStateChanger end
 
 struct BaseSIRStatesCounter <:AbstractStatesCounter
 end
