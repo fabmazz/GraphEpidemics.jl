@@ -127,6 +127,7 @@ Runs a discrete-time SIR simulation over `T` time steps, with the data structure
 ### Optional arguments
 - `beta_IorS=:I`: Whether to base infection probabilities on infectors (`:I`), susceptibles (`:S`), or their mean. Defaults to `:I`.
 - `counter=BaseSIRStatesCounter()`: The state-counting struct. When using a custom struct, make sure to implement `count_states(::BaseSIRStatesCounter, states::Vector)`
+- `dynstateChanger`: object used for changing the state dynamically
 """
 function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; 
@@ -192,7 +193,7 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
 
         ### State changer
         if (!isnothing(dynstateChanger))
-            change_states_dyn(dynstateChanger, model, states, g)
+            change_states_dyn(dynstateChanger, model, states, g, t, Iidx)
         end
 
         c=0
@@ -233,16 +234,19 @@ The `beta_IorS` argument is used only with the default SIR model (::SIRModel). O
 - `beta_IorS`: Infection rule — whether based on infected (`:I`), susceptible (`:S`), or their average if other value. Defaults to `:I`.
 - `dtype=Float64`: Data type for output arrays.
 - `counter=BaseSIRStatesCounter()`: State counting method.
+- `dynstateChanger`: object used for changing the state dynamically
+
 """
 function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64, counter::AbstractStatesCounter=BaseSIRStatesCounter())
+    patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64,
+    counter::AbstractStatesCounter=BaseSIRStatesCounter(), dynstateChanger::AbstractStateChanger=nothing)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
     delays = draw_delays(model, model.gamma, rng, nodes)
 
     data = SIRSimData(delays,N, dtype)
-    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, beta_IorS=beta_IorS,counter=counter)
+    endstate, cc = sim_sir_fast(g, model, T, data, rng, patient_zeros, beta_IorS=beta_IorS,counter=counter, dynstateChanger=dynstateChanger)
 
     data, cc
 end
