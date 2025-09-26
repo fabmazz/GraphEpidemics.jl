@@ -70,54 +70,7 @@ function check_infection(rng::AbstractRNG, p::Vector{<:AbstractFloat}, i_I::Inte
         return rand(rng) < sqrt(p[i_I]*p[j_S])
     end
 end
-"""
-`get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)`
 
-Returns the infection probability `p`. This method exists for uniformity.
-"""
-function get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
-    p
-end
-
-"""
-`get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)`
-
-Returns the infection probability based on the infecting when `infect_prob_IS` is `:I` or susceptible node (`:S`), or their geometric mean when `infect_prob_IS` is neither value.
-"""
-function get_p_infection(p::Vector{<:AbstractFloat}, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)
-    if infect_prob_IS == :I
-        return p[i_I]
-    elseif infect_prob_IS == :S
-        return p[j_S]
-    else
-        return sqrt(p[i_I]*p[j_S])
-    end
-end
-"""
-`calc_prob_infection(model::SIRModel, i::Integer, j::Integer, infect_prob_IS::Symbol)`
-
-Helper method to compute the probability of infection for the SIR model.
-"""
-function calc_prob_infection(model::SIRModel, i::Integer, j::Integer, infect_prob_IS::Symbol)
-    get_p_infection(model.beta, i, j, infect_prob_IS)
-end
-### Average pij
-function get_p_product(p1::Real, p2::Real, i1::Integer, i2::Integer)
-    (p1*p2)
-end
-function get_p_product(p1::Vector{<:Real}, p2::Vector{<:Real}, i1::Integer, i2::Integer)
-    (p1[i1]*p2[i2])
-end
-## TODO: conver cases when p1 is Vector, p2 is not and viceversa
-
-"""
-`calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored_s::Symbol)`
-
-Computes infection probability for the SIR model with susceptible
-"""
-function calc_prob_infection(model::SIRModelSus, i::Integer, j::Integer, ignored_s::Symbol)
-    get_p_product(model.beta, model.sigma, i, j)
-end
 
 """
 `sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{I}; beta_IorS=:I, counter=BaseSIRStatesCounter()) where I<:Integer`
@@ -133,7 +86,7 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
     patient_zeros::Vector{I}; 
     beta_IorS::Symbol = :I, 
     counter::AbstractStatesCounter=BaseSIRStatesCounter(), 
-    dynstateChanger::AbstractStateChanger=nothing) where I<: Integer
+    dynstateChanger::Union{Nothing,AbstractStateChanger}=nothing) where I<: Integer
     N = nv(g)
 
     infect_t = simdata.infect_time
@@ -239,7 +192,7 @@ The `beta_IorS` argument is used only with the default SIR model (::SIRModel). O
 """
 function run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, 
     patient_zeros::Vector{<:Integer}; beta_IorS::Symbol=:I, dtype::DataType=Float64,
-    counter::AbstractStatesCounter=BaseSIRStatesCounter(), dynstateChanger::AbstractStateChanger=nothing)
+    counter::AbstractStatesCounter=BaseSIRStatesCounter(), dynstateChanger::Union{Nothing, AbstractStateChanger}=nothing)
     ## draw recovery delays
     N= nv(g)
     nodes = collect(Int32,1:N)
