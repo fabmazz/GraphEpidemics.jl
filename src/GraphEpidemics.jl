@@ -18,11 +18,14 @@ include("types.jl")
 include("models.jl")
 include("utils.jl")
 include("sim.jl")
+include("sim_seir.jl")
 include("complex_contagion.jl")
 include("recurrent.jl")
 include("binary_tree.jl")
 include("gillespie.jl")
 
 export SISModel, SIRSModel, SIRModelSus, SEIRModel
+export sim_seir_fast, run_seir_fast
+export AbstractStateChanger
 
 end # module GraphEpidemics

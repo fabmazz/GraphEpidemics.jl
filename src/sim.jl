@@ -82,12 +82,12 @@ Runs a discrete-time SIR simulation over `T` time steps, with the data structure
 - `counter=BaseSIRStatesCounter()`: The state-counting struct. When using a custom struct, make sure to implement `count_states(::BaseSIRStatesCounter, states::Vector)`
 - `dynstateChanger`: object used for changing the state dynamically
 """
-function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
+function sim_sir_fast(G::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, 
     patient_zeros::Vector{I}; 
     beta_IorS::Symbol = :I, 
     counter::AbstractStatesCounter=BaseSIRStatesCounter(), 
     dynstateChanger::Union{Nothing,AbstractStateChanger}=nothing) where I<: Integer
-    N = nv(g)
+    N = nv(G)
 
     infect_t = simdata.infect_time
     infect_i = simdata.infect_node
@@ -136,6 +136,7 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
         @assert nI  == length(Iidx)
         #nR= N - nI - nS 
         if useT
+            # use t+1 because of indexing
             trace_states[t+1] = count_states(counter,states) #[nS, nI, nR]
             ## set here the flag
             mcont = (t+1 <= T)
@@ -146,16 +147,15 @@ function sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, sim
 
         ### State changer
         if (!isnothing(dynstateChanger))
-            change_states_dyn(dynstateChanger, model, states, g, t, Iidx)
+            change_states_dyn(dynstateChanger, model, states, G, t, Iidx)
         end
 
         c=0
         #Iidx = findall(states.==2) # this will be used also later
         empty!(new_inf)
-        #new_inf = Set()
         for i in Iidx
             ## TODO: parallel runs need to lock the graph object and then unlock it
-            for j in neighbors(g,i)
+            for j in neighbors(G,i)
                 if (states[j] == 1) ## double check to be sure
                     ## Here, multiple dispatch will help distinguish 
                     ## when it's a vector of probabilities or just a single one for everyone

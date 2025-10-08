@@ -63,6 +63,7 @@ struct SIRModelHet{F0<:AbstractFloat,F1<:VFloat, F2<:VFloat, F3<:UVFloat} <: Abs
 end
 
 model_states(x::AbstractSIRModel) = (:S,:I,:R)
+
 """
 `gamma(::model)`
 
@@ -70,16 +71,21 @@ Every model <: AbstractSIRModel has to implement this method to extract the reco
 if the γ is given in a different way (`gamma` property)
 """
 gamma(x::AbstractSIRModel) = x.gamma
+function gamma(x::AbstractSEIRModel)
+    throw(NotImplementedError("This function must be defined by each concrete type"))
+end
 #gamma(x::SIRModel) = x.gamma
 #gamma(x::SIRModelSus) = x.gamma
 
 
 
-AF=AbstractFloat
 draw_delay_geom(p::AF, rng::AbstractRNG) = rand(rng, Geometric(p))+1
 draw_delay_geom(p::AF, rng::AbstractRNG, i::Integer) = rand(rng, Geometric(p))+1
 draw_delay_geom( p::AF, rng::AbstractRNG, nodes::Vector{<:Integer})= rand(rng, Geometric(p), length(nodes)) .+1
-
+function draw_delay_geom!(p::AF, rng::AbstractRNG, array::Vector{<:Integer})
+    rand!(rng, Geometric(p), array)
+    array[:] .+= 1
+end
 
 draw_delays_markov(p::AbstractFloat,rng::AbstractRNG, nodes::Union{Integer,Vector{<:Integer}}) = draw_delay_geom(p, rng, nodes)
 draw_delays_markov(p::Vector{<:AbstractFloat}, rng::AbstractRNG, nodes::Vector{<:Integer}) = draw_delay_geom.(p,rng, nodes)
@@ -89,8 +95,8 @@ draw_delays_markov(p::Vector{<:AbstractFloat}, rng::AbstractRNG, i::Integer) = d
 
 Draw delays according to the model, with `p` that can be either a vector or a single value.
 """
-draw_delays(m::AbstractSIRModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
-#draw_delays(m::SIRModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
+draw_delays(m::AbstractMarkovModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
+#draw_delays(m::AbstractSIRModel, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
 #draw_delays(m::SIRModelSus, p, rng::AbstractRNG, nodes::Union{Integer, Vector{<:Integer}}) = draw_delays_markov(p, rng, nodes)
 
 
@@ -116,19 +122,17 @@ This function draws `m` exponentially distributed variables with rate `p`, where
 draw_delay_exp(p::AF, rng::AbstractRNG, nodes)= rand(rng, Exponential(1/p), length(nodes))
 
 #### SEIR Model ####
-struct SEIRModel{F<:AbstractFloat} <: AbstractEpiModel
+struct SEIRModel{F<:AbstractFloat} <: AbstractSEIRModel
     eta::F
     beta::F ##vector is the 
     gamma::F
     #stateType::DataType
 end
-
-model_states(x::SEIRModel) = (:S,:E,:I,:R)
-spreading_states(x::SEIRModel) = Dict(:I=>[(:S,:E, x.beta)])
-trans_independent(x::SEIRModel) = [(:E,:I,x.eta),(:I,:R, x.gamma)]
-
-first_active_states(m::SEIRModel) = (:E,)
-draw_delays(m::SEIRModel, p, rng::AbstractRNG, node) = draw_delays_markov(p, rng, node )
+model_states(x::AbstractSEIRModel) = (:S,:E,:I,:R)
+gamma(x::SEIRModel) = x.gamma
+eps(x::SEIRModel) = x.eta
+## this is not needed as long as AbstractSEIRModel <: AbstractMarkovModel
+#draw_delays(m::AbstractSEIRModel, p, rng::AbstractRNG, node) = draw_delays_markov(p, rng, node )
 
 #=== FOR THE COMPLEX CONTAGION ROUTINES ===#
 
@@ -136,9 +140,13 @@ spreading_states(x::SIRModel) = Dict(:I=>[(:S,:I, x.beta)])
 trans_independent(x::SIRModel) = [(:I,:R, x.gamma)]
 first_active_states(x::AbstractSIRModel) = (:I,)
 
+spreading_states(x::AbstractSEIRModel) = Dict(:I=>[(:S,:E, x.beta)])
+trans_independent(x::AbstractSEIRModel) = [(:E,:I,x.eta),(:I,:R, x.gamma)]
+first_active_states(m::AbstractSEIRModel) = (:E,)
 
 #======== INFECTION PROBABILITY CALCULATION ======#
 
+calc_prob_infection(m::SEIRModel,i::I,j::I,ignored_::Symbol) where I<:Integer = m.beta
 
 """
 `get_p_infection(p::AbstractFloat, i_I::Integer, j_S::Integer, infect_prob_IS::Symbol)`

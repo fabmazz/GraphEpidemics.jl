@@ -22,7 +22,10 @@ abstract type AbstractEpiModel end
 Abstract supertype for all SIR epidemiological models. Subtypes must implement a method for computing infection probabilities.
 This model is used for `run_sir_fast` and `run_sir_gillespie`.
 """
-abstract type AbstractSIRModel <: AbstractEpiModel end
+abstract type AbstractMarkovModel <: AbstractEpiModel end
+
+abstract type AbstractSIRModel <: AbstractMarkovModel end
+abstract type AbstractSEIRModel <: AbstractMarkovModel end
 
 
 abstract type AbstractStatesCounter end
@@ -40,3 +43,11 @@ end
 function change_states_dyn(dynstateChanger::AbstractStateChanger, model::AbstractSIRModel, states, g, t, Iidx)
     ### EMPTY
 end
+
+struct NotImplementedError <: Exception
+    message::String
+end
+
+Base.showerror(io::IO, e::NotImplementedError) = print(io, e.message)
+
+const AF=AbstractFloat
