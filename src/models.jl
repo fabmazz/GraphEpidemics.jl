@@ -9,8 +9,8 @@ StI = Int8
 
 prob_from_rate(r::Real, t::Real) = 1 - exp(-r*t)
 
-UVFloat = Union{Vector{<:AbstractFloat}, AbstractFloat}
-VFloat = Vector{<:AbstractFloat}
+const UVFloat = Union{Vector{<:AbstractFloat}, AbstractFloat}
+const VFloat = Vector{<:AbstractFloat}
 
 function states_values(x::AbstractEpiModel)
     d::Dict{Symbol,StI} =  Dict(s=>i for (i,s) in enumerate(model_states(x)))
@@ -134,6 +134,18 @@ eps(x::SEIRModel) = x.eta
 ## this is not needed as long as AbstractSEIRModel <: AbstractMarkovModel
 #draw_delays(m::AbstractSEIRModel, p, rng::AbstractRNG, node) = draw_delays_markov(p, rng, node )
 
+
+struct SEIRHetModel{F<:AbstractFloat,VF<:VFloat,UVF<:UVFloat,UVF2<:UVFloat} <: AbstractSEIRModel
+    beta_d::F
+    alpha::VF
+    sigma::VF
+    eps:: UVF
+    gamma::UVF2
+    #stateType::DataType
+end
+gamma(m::SEIRHetModel) = m.gamma
+eps(m::SEIRHetModel) = m.eps
+
 #=== FOR THE COMPLEX CONTAGION ROUTINES ===#
 
 spreading_states(x::SIRModel) = Dict(:I=>[(:S,:I, x.beta)])
@@ -141,7 +153,7 @@ trans_independent(x::SIRModel) = [(:I,:R, x.gamma)]
 first_active_states(x::AbstractSIRModel) = (:I,)
 
 spreading_states(x::AbstractSEIRModel) = Dict(:I=>[(:S,:E, x.beta)])
-trans_independent(x::AbstractSEIRModel) = [(:E,:I,x.eta),(:I,:R, x.gamma)]
+trans_independent(x::AbstractSEIRModel) = [(:E,:I,eps(x)),(:I,:R, gamma(x))]
 first_active_states(m::AbstractSEIRModel) = (:E,)
 
 #======== INFECTION PROBABILITY CALCULATION ======#
@@ -199,4 +211,7 @@ end
 
 function calc_prob_infection(model::SIRModelHet, i::Integer, j::Integer, ignored_s::Symbol)
     model.beta_d * get_p_product(model.alpha,model.sigma, i, j)
+end
+function calc_prob_infection(model::SEIRHetModel, i::I, j::I, ign_symb::Symbol) where I<:Integer
+    model.beta_d * get_p_product(model.alpha, model.sigma, i, j)
 end

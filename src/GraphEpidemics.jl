@@ -24,7 +24,7 @@ include("recurrent.jl")
 include("binary_tree.jl")
 include("gillespie.jl")
 
-export SISModel, SIRSModel, SIRModelSus, SEIRModel
+export SISModel, SIRSModel, SIRModelSus, SEIRModel, SEIRHetModel
 export sim_seir_fast, run_seir_fast
 export AbstractStateChanger
 
