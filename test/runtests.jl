@@ -83,7 +83,7 @@ end
     s1 = rand(rng,N)*0.5 .+0.5
     model = SEIRHetModel(bet,a1,s1,gam*2,gam )
 
-    sd,cc = run_seir_fast(G,model,-1,rng, sample(rng,1:N,5,replace=false),delays_types=Int32,dtype=Float32)
+    sd,cc = run_seir_fast(G,model,-1,rng, sample(rng,1:N,5,replace=false),delays_type=Int32,dtype=Float32)
     cpl = stack(cc)
 
     @test cpl[:,end] == [83,0,0,17]
