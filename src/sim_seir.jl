@@ -36,7 +36,7 @@ function count_states(counter::SEIRStatesCounter,states::Vector)
 end
 
 """
-`sim_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{I}; beta_IorS=:I, counter=BaseSIRStatesCounter()) where I<:Integer`
+`sim_seir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{I}; beta_IorS=:I, counter=BaseSIRStatesCounter()) where I<:Integer`
 
 Runs a discrete-time SEIR simulation over `T` time steps, with the data structures already set up.
 
@@ -144,7 +144,7 @@ function sim_seir_fast(G::AbstractGraph, model::AbstractSEIRModel, T::Integer, s
     states, trace_states
 end
 """
-`run_sir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, patient_zeros::Vector{<:Integer}; dtype=Float64,  delays_types::DataType=Int64, counter=BaseSIRStatesCounter())`
+`run_seir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, rng::AbstractRNG, patient_zeros::Vector{<:Integer}; dtype=Float64,  delays_types::DataType=Int64, counter=BaseSIRStatesCounter())`
 
 Sets up and runs a fast SEIR and SEIR-like simulation, returning simulation data and state counts.
 
@@ -156,14 +156,14 @@ Sets up and runs a fast SEIR and SEIR-like simulation, returning simulation data
 
 """
 function run_seir_fast(g::AbstractGraph, model::AbstractSEIRModel, T::Integer, rng::AbstractRNG, 
-    patient_zeros::Vector{<:Integer}; dtype::DataType=Float64, delays_types::DataType=Int64,
+    patient_zeros::Vector{<:Integer}; dtype::DataType=Float64, delays_type::DataType=Int64,
     counter::AbstractStatesCounter=SEIRStatesCounter(), dynstateChanger::Union{Nothing, AbstractStateChanger}=nothing)
     ## draw delays
     N= nv(g)
     # nodes = collect(Int32,1:N)
-    rec_delays = Vector{delays_types}(undef,N)
+    rec_delays = Vector{delays_type}(undef,N)
     draw_delay_geom!(gamma(model), rng, rec_delays)
-    latent_delays = Vector{delays_types}(undef,N)
+    latent_delays = Vector{delays_type}(undef,N)
     draw_delay_geom!(eps(model), rng, latent_delays)
 
     #draw_delays(model, gamma(model), rng, nodes)

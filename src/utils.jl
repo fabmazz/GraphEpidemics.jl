@@ -18,3 +18,13 @@ function count_SIR_svector(states::Vector)
         sum(states.==i) for i=1:3
     )
 end
+
+"""
+Round a number up to significance digits
+
+Example: 0.016248270 -> 0.02 with s_digits=0, 0.016 with s_digits=1, etc
+"""
+function round_sig(x::Real, s_digits::Integer)
+    ndig = floor(Int,log10(x))*-1
+    round(x, digits=ndig+s_digits)
+end
