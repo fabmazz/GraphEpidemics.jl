@@ -35,6 +35,55 @@ function count_states(counter::SEIRStatesCounter,states::Vector)
     )
 end
 
+function get_states_time(data::SEIRSimData, t::Real; symbols=false)
+    if symbols
+        return _get_states_symb(data, t)
+    end
+    n = length(data.infect_time)
+    states = Vector{Int8}(undef, n)
+    
+    for i in 1:n
+        inf_t = data.infect_time[i]
+        lat = data.lat_delays[i]
+        rec = data.rec_delays[i]
+        
+        if t < inf_t
+            states[i] = 1
+        elseif t < inf_t + 1 + lat
+            states[i] = 2
+        elseif t < inf_t + 1 + lat + rec
+            states[i] =3
+        else
+            states[i] =4
+        end
+    end
+    
+    return states
+end
+
+function _get_states_symb(data::SEIRSimData, t::Real)
+    n = length(data.infect_time)
+    states = Vector{Symbol}(undef, n)
+    
+    for i in 1:n
+        inf_t = data.infect_time[i]
+        lat = data.lat_delays[i]
+        rec = data.rec_delays[i]
+        
+        if t < inf_t
+            states[i] = :S
+        elseif t < inf_t + 1 + lat
+            states[i] = :E
+        elseif t < inf_t + 1 + lat + rec
+            states[i] = :I
+        else
+            states[i] = :R
+        end
+    end
+    
+    return states
+end
+
 """
 `sim_seir_fast(g::AbstractGraph, model::AbstractSIRModel, T::Integer, simdata::SIRSimData, rng::AbstractRNG, patient_zeros::Vector{I}; beta_IorS=:I, counter=BaseSIRStatesCounter()) where I<:Integer`
 
@@ -81,14 +130,14 @@ function sim_seir_fast(G::AbstractGraph, model::AbstractSEIRModel, T::Integer, s
         new_inf = Set()
         for i in Eidx
             if (t>=infect_t[i]+1+del_lat[i])
-                states[i] = 3
+                states[i] = 3 ## INFECTIOUS
                 push!(new_inf, i)
             end
         end
         new_rec = Set()
         for i in Iidx
             if (t >= infect_t[i] + del_lat[i] + del_rec[i]+1)
-                states[i] = 4
+                states[i] = 4 ### RECOVERED
                 push!(new_rec, i)
             end
         end

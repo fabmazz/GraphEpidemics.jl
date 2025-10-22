@@ -25,7 +25,7 @@ include("binary_tree.jl")
 include("gillespie.jl")
 
 export SISModel, SIRSModel, SIRModelSus, SEIRModel, SEIRHetModel
-export sim_seir_fast, run_seir_fast
+export sim_seir_fast, run_seir_fast, get_states_time
 export AbstractStateChanger
 
 end # module GraphEpidemics
