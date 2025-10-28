@@ -28,4 +28,9 @@ export SISModel, SIRSModel, SIRModelSus, SEIRModel, SEIRHetModel
 export sim_seir_fast, run_seir_fast, get_states_time
 export AbstractStateChanger
 
+using PrecompileTools
+@compile_workload begin
+    include("precompile.jl")
+end
+
 end # module GraphEpidemics
