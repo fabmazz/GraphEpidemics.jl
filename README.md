@@ -12,9 +12,9 @@ The graphs are provided via the [Graphs.jl](https://github.com/JuliaGraphs/Graph
 
 ## Installation
 
-This package is not yet included in the Julia general index.
+This package is included in the Julia Registry, and can be added by calling `Pkg.add("GraphEpidemics")`.
 
-To install it, from the Julia Pkg manager (`]`), run
+To install it from source, the Julia Pkg manager run
 ```
 pkg> add https://github.com/fabmazz/GraphEpidemics.jl.git
 ```
@@ -24,9 +24,13 @@ pkg> dev ./GraphEpidemics.jl
 ```
 which will keep the package source in the directory where you downloaded it.
 
-## Usage
+## What is included
 
-You can look at the [example notebook](https://github.com/fabmazz/GraphEpidemics.jl/blob/main/example/Models_example.ipynb) provided for an example of running a standard SIR Model and an implementation of the SEIR model.
+This package provides two methods for fast simulation of SIR and SEIR models in discrete time (`run_sir_fast` and `run_seir_fast`).
+
+Moreover, a more involved method (`run_complex_contagion`) is available which is possible to extend to several different types of models. 
+
+You can look at the [example notebook](https://github.com/fabmazz/GraphEpidemics.jl/blob/main/example/Models_example.ipynb) provided for an example of running a standard SIR Model and an implementation of the SEIR model using the "complex contagion" mechanism.
 
 ## Caveats
 
