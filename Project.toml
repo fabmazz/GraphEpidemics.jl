@@ -1,7 +1,7 @@
 name = "GraphEpidemics"
 uuid = "6aca1ccc-3d4c-4aa2-bef3-7b7b4d8fa495"
 authors = ["Fabio Mazza <fab4mazz@gmail.com>"]
-version = "0.5.0"
+version = "0.6.0"
 
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
