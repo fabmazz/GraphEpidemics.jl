@@ -123,18 +123,21 @@ function sim_seir_fast(G::AbstractGraph, model::AbstractSEIRModel, T::Integer, s
     Eidx = Set(patient_zeros)
     mcont = true
     nI = 0#length(patient_zeros)
-    Iidx = Set()
-    new_expo = Set()
+    Iidx = Set{Int}()
+    new_expo = Set{Int}()
+    new_inf = Set{Int}()
+    new_rec = Set{Int}()
+
     while (mcont)
         
-        new_inf = Set()
+        empty!(new_inf)
         for i in Eidx
             if (t>=infect_t[i]+1+del_lat[i])
                 states[i] = 3 ## INFECTIOUS
                 push!(new_inf, i)
             end
         end
-        new_rec = Set()
+        empty!(new_rec)
         for i in Iidx
             if (t >= infect_t[i] + del_lat[i] + del_rec[i]+1)
                 states[i] = 4 ### RECOVERED
