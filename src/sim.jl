@@ -18,6 +18,22 @@ struct SIRSimData{I<:Real, F<:AbstractFloat}
 end
 SIRSimData{I,F}(N::Integer) where {I,F}= SIRSimData(zeros(I,N), fill(F(NaN),N),fill(F(NaN),N))
 
+function get_t_R(data::SIRSimData, i)
+    @. (data.infect_time[i] +data.rec_delays[i] +1)
+end
+
+function get_t_I(data::SIRSimData, i)
+    @.( data.infect_time[i] +1)    
+end
+
+function get_t_infected(data::SIRSimData, i)
+    @.(data.infect_time[i] +1)
+end
+
+function get_idx_infect(simdat::SIRSimData)
+    findall(@. !isnan(simdat.infect_time))
+end
+
 """
 `explode(d::SIRSimData)`
 
