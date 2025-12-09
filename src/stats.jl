@@ -16,7 +16,7 @@ function moving_average(data, window::Integer)
 end
 
 
-function compute_R_eff(simdata, Tmax, nseeds;method::Symbol = :daily, smoothing::Integer=2, window::Integer=7)
+function compute_R_eff(simdata, Tmax, nseeds;method::Symbol = :daily, smoothing::Integer=2, window::Integer=7, dt=1)
 
     raw_R = fill(NaN, Tmax+1)
 
@@ -32,14 +32,15 @@ function compute_R_eff(simdata, Tmax, nseeds;method::Symbol = :daily, smoothing:
             date_rec =@.( convert(Int32,getTR(iact) +1) )
             date_I = @.( convert(Int32,getTI(iact) +1) )
             mean_infect_time = mean(date_rec) - mean(date_I)
+            mean_infect_time *= dt
 
             date_infected = get_t_infected(simdata, iact)
             
             # this is an array now
-            new_infections = StatsBase.counts(@.(convert(Int32,date_infected +1)), Tmax+1)
+            new_infections = counts(@.(convert(Int32,date_infected +1)), Tmax+1)
             
             ### adjusted the arrays above, this is an array starting from 0
-            N_I = cumsum(StatsBase.counts(date_I, Tmax+1)) .- cumsum(StatsBase.counts(date_rec, Tmax+1))
+            N_I = cumsum(counts(date_I, Tmax+1)) .- cumsum(counts(date_rec, Tmax+1))
             raw_R[:] = @.(new_infections /N_I )* mean_infect_time
             raw_R[@. N_I == 0] .= 0
             #raw_R[@.(isnan(raw_R) || isinf(raw_R))] .= 0.
@@ -64,12 +65,12 @@ function compute_R_eff(simdata, Tmax, nseeds;method::Symbol = :daily, smoothing:
             get_t_R(simdata, iact)
         end
         )
-        allts = StatsBase.counts(tims)
+        allts = counts(tims)
         mm = min(length(allts), length(sources))
         sources[1:mm] .= allts[1:mm]
 
         t_infected = convert.(Int32,get_t_infected(simdata, iact))
-        targets[2:end] = StatsBase.counts(t_infected, Tmax) ## this automatically searches for k=1:Tmax
+        targets[2:end] = counts(t_infected, Tmax) ## this automatically searches for k=1:Tmax
         
         ma = sources .> 0
         fill!(raw_R, 0.0)
