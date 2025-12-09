@@ -16,6 +16,22 @@ function reset!(data::SEIRSimData, model::AbstractSEIRModel)
     fill!(data.infect_time, NaN)
     fill!(data.infect_node, NaN)
 end
+
+function get_t_R(data::SEIRSimData, i)
+    @. (data.infect_time[i] +data.rec_delays[i] + data.lat_delays[i] +1)
+end
+
+function get_t_I(data::SEIRSimData, i)
+    @.( data.infect_time[i] + data.lat_delays[i] +1)    
+end
+
+function get_t_infected(data::SEIRSimData, i)
+    @.(data.infect_time[i] +1)
+end
+
+function get_idx_infect(simdat::SEIRSimData)
+    findall(@. !isnan(simdat.infect_time))
+end
 """
 `SEIRSimData(lat_delays, rec_delays, N::Integer, typeDates::DataType)`
 

@@ -23,9 +23,10 @@ include("complex_contagion.jl")
 include("recurrent.jl")
 include("binary_tree.jl")
 include("gillespie.jl")
+include("stats.jl")
 
 export SISModel, SIRSModel, SIRModelSus, SEIRModel, SEIRHetModel
-export sim_seir_fast, run_seir_fast, get_states_time
+export sim_seir_fast, run_seir_fast, get_states_time, get_t_I, get_t_R,get_idx_infect, get_t_infected
 export AbstractStateChanger
 
 using PrecompileTools
